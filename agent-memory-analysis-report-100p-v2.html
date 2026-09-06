@@ -1,0 +1,2702 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent 记忆系统完整分析报告（V2 · 100 页 · 初学者版）</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:#0d1117;color:#d4d4d4;line-height:1.8}
+.page{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;
+  padding:6vh 9vw;position:relative;border-bottom:1px solid #1c2530}
+.pagenum{position:absolute;bottom:16px;right:28px;font-size:13px;color:#58a6ff;letter-spacing:1px}
+.part-tag{position:absolute;top:16px;right:28px;font-size:12px;color:#8b949e}
+h1{font-size:44px;color:#f0f6fc;margin-bottom:24px;line-height:1.4}
+h2{font-size:26px;color:#58a6ff;margin:28px 0 14px;border-left:4px solid #58a6ff;padding-left:12px}
+h3{font-size:19px;color:#7ee787;margin:20px 0 10px}
+p,li{font-size:16.5px;margin-bottom:10px;max-width:62em}
+ul,ol{padding-left:1.6em}
+code{font-family:Consolas,Monaco,monospace;background:#161b22;color:#79c0ff;padding:1px 6px;border-radius:4px;font-size:14px}
+pre{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:16px 20px;overflow-x:auto;margin:12px 0}
+pre code{background:none;padding:0;color:#c9d1d9;font-size:13.5px;line-height:1.6}
+table{border-collapse:collapse;margin:14px 0;width:100%;max-width:60em;font-size:14.5px}
+th{background:#161b22;color:#58a6ff}
+th,td{border:1px solid #30363d;padding:8px 12px;text-align:left;vertical-align:top}
+.note{background:#0d1f2d;border-left:4px solid #58a6ff;padding:12px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+.warn{background:#2d1a0f;border-left:4px solid #f0883e;padding:12px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+.ok{background:#12261a;border-left:4px solid #7ee787;padding:12px 18px;border-radius:0 8px 8px 0;margin:14px 0}
+.kw{color:#f0883e;font-weight:bold}
+.src{color:#8b949e;font-size:13.5px;font-family:Consolas,monospace}
+.cover{text-align:center}
+.cover h1{font-size:52px;margin:0 0 18px}
+.cover .sub{font-size:20px;color:#8b949e;margin-bottom:40px}
+.cover .big{font-size:64px;color:#58a6ff;font-weight:bold;margin:30px 0}
+.toc-item{display:flex;justify-content:space-between;max-width:44em;padding:7px 0;border-bottom:1px dashed #30363d;font-size:17px}
+.toc-item a{color:#d4d4d4;text-decoration:none}
+.toc-item a:hover{color:#58a6ff}
+.toc-item .pg{color:#58a6ff}
+.badge{display:inline-block;background:#21262d;border:1px solid #30363d;color:#58a6ff;border-radius:12px;
+  padding:2px 12px;font-size:13px;margin:0 6px 8px 0}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;max-width:60em}
+.flow .box{background:#161b22;border:1px solid #58a6ff;border-radius:8px;padding:8px 14px;font-size:14.5px}
+.flow .arr{color:#f0883e;font-size:20px}
+.qa{margin:12px 0}
+.qa .q{color:#f0883e;font-weight:bold}
+.columns{display:flex;gap:24px;flex-wrap:wrap}
+.columns>div{flex:1;min-width:22em}
+</style></head>
+<body>
+<section class="page cover" id="p1"><div class="part-tag">封面</div>
+      <div class="cover">
+        <div class="sub">初学者视角 · 源码级分析 · Python 实现</div>
+        <h1>Agent 记忆系统完整分析报告</h1>
+        <div class="big">100 页</div>
+        <p>
+          <span class="badge">Claude Code</span><span class="badge">OpenClaw</span>
+          <span class="badge">Hermes</span><span class="badge">DeepSeek-Harness</span>
+          <span class="badge">NaiveAgent（对照）</span>
+        </p>
+        <p class="sub" style="margin-top:40px">配套可运行代码：agent_memory_lab_v2.py（V2 场景版，报告输出即其真实运行结果）<br>　　　　　　　　agent_memory_lab.py（V1 原版，结构相同、示例为旧场景）<br>
+        V2：全量拼接对照版 + 真实源码注释版 · 每页均已核对真实源码路径 · 生成日期 2026-09-06</p>
+      </div><div class="pagenum">1 / 100</div></section>
+<section class="page " id="p2"><div class="part-tag">目录</div><h1>目录</h1><div class="toc-item"><a href="#p3">第 0 章 · 预备知识</a><span class="pg">第 3 页起</span></div><div class="toc-item"><a href="#p12">第 1 章 · Claude Code：文件记忆与双轨注入</a><span class="pg">第 12 页起</span></div><div class="toc-item"><a href="#p29">第 2 章 · OpenClaw：数据库记忆与召回代理</a><span class="pg">第 29 页起</span></div><div class="toc-item"><a href="#p45">第 3 章 · Hermes：全链路记忆流水线</a><span class="pg">第 45 页起</span></div><div class="toc-item"><a href="#p61">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</a><span class="pg">第 61 页起</span></div><div class="toc-item"><a href="#p73">第 5 章 · NaiveAgent：全量拼接对照组</a><span class="pg">第 73 页起</span></div><div class="toc-item"><a href="#p80">第 6 章 · 五家横向对比与设计决策</a><span class="pg">第 80 页起</span></div><div class="toc-item"><a href="#p86">第 7 章 · Python 实现教学</a><span class="pg">第 86 页起</span></div><div class="toc-item"><a href="#p95">第 8 章 · 注入后的完整 Prompt 实例集</a><span class="pg">第 95 页起</span></div><div class="toc-item"><a href="#p99">第 9 章 · 术语表与练习题</a><span class="pg">第 99 页起</span></div><h2>阅读方式</h2><p>本报告每一屏为独立一页，共 <span class="kw">100</span> 页，滚动即翻页。初学者建议按顺序通读；有基础者可跳至第 6 章（对比）和第 8 章（Prompt 实例）。</p><div class="pagenum">2 / 100</div></section>
+<section class="page " id="p3"><div class="part-tag">第 0 章 · 预备知识</div><h1>如何使用本报告</h1>
+<h2>这份报告回答什么问题</h2>
+<p>你日常用的 AI 编程助手（Claude Code、OpenCode 类工具、各类 agent 框架）"记住你说过的话"
+的能力，到底是怎么实现的？本报告解剖 <span class="kw">5 个真实 agent 仓库</span>的记忆系统源码，
+把每一处机制还原成你能看懂、能动手复现的样子。</p>
+<h2>三步阅读路线</h2>
+<ol>
+<li><b>先建概念</b>（第 0 章，9 页）：上下文窗口、token、压缩、检索这些词到底是什么；</li>
+<li><b>看五家怎么做</b>（第 1-5 章，68 页）：每家一章，按"存储→写入→读取→压缩"四步走；</li>
+<li><b>动手做</b>（第 6-9 章，21 页）：对比、Python 实现、真实 prompt 例子、练习。</li>
+</ol>
+<h2>约定</h2>
+<table><tr><th>记号</th><th>含义</th></tr><tr><td><code>src/xxx.ts:123</code></td><td>真实仓库的文件路径和行号，可打开仓库对照</td></tr><tr><td><span class='kw'>加粗橙色</span></td><td>关键词，第 9 章术语表有解释</td></tr><tr><td>灰色引用块</td><td>代码/配置原文或真实运行输出</td></tr></table>
+<div class="ok"><b>V2 版本说明</b>：① 对照组不再使用旧叫法，改为 <b>NaiveAgent（全量拼接对照组）</b>——定义严格化：直接拼全量提示词、无长期记忆、无压缩无检索；示例场景统一改为接口性能分析；② 各章补充对应仓库的<b>真实源码摘录（带讲解注释）</b>，并修正了三处与源码不符的表述（见 p19、p49、p69 的勘误框）；③ 全部示例输出改由配套 <code>agent_memory_lab_v2.py</code>（V2 场景版，与报告同步）真实运行产生，关键数字已按实测回写；④ 新增第二批带注释源码：memoryScan / reactiveCompact 与 /compact 调度 / 会话游标 / sqlite-vec 加载 / 时间衰减公式 / 8MB 捕获围栏 / 摘要模板全文 / MemoryStore.add 四道检查 / curator / 旧摘要识别与恢复页脚 / 提交围栏 / Session 与 SurfaceManager / 投影 / 压缩事务时序，并新增第 4 处勘误（p51：curator 的策展对象是技能库而非记忆条目）。</div>
+<div class="note">报告配套可运行代码：<code>D:/memory/agent_memory_lab_v2.py</code>（V2 场景版；同目录的 agent_memory_lab.py 为 V1 原版）
+（五种记忆实现，零第三方依赖）。所有 prompt 例子都是它真实运行的输出，不是手写的示意。</div>
+<div class="pagenum">3 / 100</div></section>
+<section class="page " id="p4"><div class="part-tag">第 0 章 · 预备知识</div><h1>什么是上下文窗口</h1>
+<h2>模型的一次"思考"只有这么大</h2>
+<p>大语言模型没有"脑子"——它每次生成回复时，能看到的全部信息就是发给它的那段文本，
+这段文本的容量上限叫<span class="kw">上下文窗口</span>（context window），单位是 token。
+token 可以粗略理解为"半个到一个词"：中文大约 1 个字 ≈ 1~2 个 token。</p>
+<h2>窗口里装的是什么</h2>
+<div class="flow"><span class="box">system prompt</span><span class="arr">→</span><span class="box">长期记忆</span><span class="arr">→</span><span class="box">对话历史</span><span class="arr">→</span><span class="box">工具输出</span><span class="arr">→</span><span class="box">当前问题</span></div>
+<p>这五样东西在抢同一个窗口。工具输出（比如一次 <code>grep</code> 的结果、一张图片的 base64）
+动辄上万 token，是最贪心的房客。</p>
+<div class="warn">关键认知：窗口装不下的内容，模型就<b>完全不知道</b>——不是"记得模糊"，是彻底消失。
+第 3 轮说的话，到第 50 轮如果被截掉了，模型等于从没听过。</div>
+<h2>本报告的主线问题</h2>
+<p>agent 的记忆系统，本质上就是在回答两个问题：
+<b>什么东西值得留下来</b>（写入侧），以及<b>当前这一步该把什么放进窗口</b>（读取侧）。
+外加一个救急手段：<b>窗口快满了怎么办</b>（压缩）。后面所有章节都是围绕这三件事展开的。</p>
+<div class="pagenum">4 / 100</div></section>
+<section class="page " id="p5"><div class="part-tag">第 0 章 · 预备知识</div><h1>记忆的三种形态</h1>
+<h2>形态一：窗口内的一切（短期）</h2>
+<p>最朴素的"记忆"就是消息列表 <code>messages[]</code>。只要还在列表里，模型就记得；被挤出去就忘。
+NaiveAgent（第 5 章）就停留在这一形态。</p>
+<h2>形态二：压缩后的会话摘要（会话内）</h2>
+<p>当列表太长，把旧消息交给一个（通常更便宜的）模型写成一段摘要，用摘要替换原文。
+信息有损，但保住了主线。Claude Code 的 autoCompact、OpenClaw 的 compaction 都是这一形态。</p>
+<h2>形态三：跨会话的长期记忆</h2>
+<p>这次对话里学到的事实，下次开新会话还在。存储载体各家不同：
+markdown 文件（Claude Code / Hermes）或数据库（OpenClaw / mem0 类服务）。</p>
+<h2>三种形态的关系</h2>
+<div class="flow"><span class="box">对话原文（短期）</span><span class="arr">→</span><span class="box">摘出事实（写入）</span><span class="arr">→</span><span class="box">长期记忆库</span><span class="arr">→</span><span class="box">按任务检索（读取）</span><span class="arr">→</span><span class="box">注入新会话 prompt</span></div>
+<table><tr><th>形态</th><th>寿命</th><th>体积</th><th>本报告对应章节</th></tr><tr><td>窗口内消息</td><td>本次会话</td><td>最大（可到百万 token）</td><td>第 0 章 / 第 5 章</td></tr><tr><td>会话摘要</td><td>本次会话</td><td>中等</td><td>各章'压缩'小节</td></tr><tr><td>长期记忆</td><td>跨会话持久</td><td>最小（浓缩事实）</td><td>各章'存储/写入/读取'小节</td></tr></table>
+<div class="pagenum">5 / 100</div></section>
+<section class="page " id="p6"><div class="part-tag">第 0 章 · 预备知识</div><h1>什么是压缩（compaction）</h1>
+<h2>窗口快满时的救急手术</h2>
+<p><span class="kw">压缩</span>（也叫 compaction / summarization / 摘要）指：当上下文接近窗口上限时，
+把较早的消息替换成一段摘要，腾出空间继续对话。</p>
+<h2>压缩的三个决策点</h2>
+<ol>
+<li><b>什么时候压？</b>——阈值。例如 Claude Code 在"有效窗口 - 已用 token"只剩预留输出空间时触发
+（<code>src/services/compact/autoCompact.ts</code>）。</li>
+<li><b>从哪里切？</b>——切点。不能把正在讨论的话题拦腰截断，OpenClaw 专门有
+<code>findCutPoint()</code>（compaction.ts:454）寻找安全切点。</li>
+<li><b>摘要保留什么？</b>——策略。主流做法是用一个结构化 prompt 让模型摘要：用户目标、
+已完成的步骤、关键决定、未完成事项、踩过的坑。</li>
+</ol>
+<h2>最划算的压缩：先清工具输出</h2>
+<p>窗口里最占地方、时效最短的往往是工具结果——第 3 轮读的文件内容，到第 20 轮多半没用了。
+Claude Code 的 <span class="kw">microcompact</span>（<code>microCompact.ts</code>）就是只把旧工具输出
+替换成一行占位符 <code>[Old tool result content cleared]</code>，其他消息不动。
+这是性价比最高的一刀。</p>
+<div class="ok">初学者第一条实用经验：做 agent 先实现"清旧工具输出"，十行代码，解决一半的窗口爆炸。</div>
+<div class="pagenum">6 / 100</div></section>
+<section class="page " id="p7"><div class="part-tag">第 0 章 · 预备知识</div><h1>什么是检索召回</h1>
+<h2>记忆库大了，就不能全带</h2>
+<p>长期记忆只有十几条时，全量塞进 system prompt 没问题。但记忆涨到几百条后，
+全量注入既浪费 token 又稀释模型注意力——于是需要<span class="kw">检索召回</span>：
+按当前任务，只挑相关的几条。</p>
+<h2>检索的两条技术路线</h2>
+<table><tr><th>路线</th><th>原理</th><th>优点</th><th>缺点</th></tr><tr><td>关键词/全文检索(FTS)</td><td>词面匹配（如 SQLite FTS5）</td><td>零依赖、可解释</td><td>同义表达匹配不上</td></tr><tr><td>向量检索</td><td>文本→向量，算余弦相似度</td><td>能匹配语义近似的表达</td><td>要嵌入模型、结果难解释</td></tr></table>
+<p>生产级实现往往<span class="kw">混合检索</span>（hybrid）：两路各打一个分，加权融合。
+OpenClaw 的 <code>hybrid.ts</code>、以及本报告配套代码里的 0.6×FTS + 0.4×向量 都是这个思路。</p>
+<h2>比检索更重要的一步：相关性门控</h2>
+<p>检索排序解决"哪条最相关"，但没解决"要不要注入"。OpenClaw 的召回代理
+（<code>extensions/active-memory/prompt.ts</code>）会先让小模型判断：这次任务有没有必要带记忆？
+没有就明确返回 <code>NONE</code>——<b>塞进噪音记忆比不给记忆更伤</b>。</p>
+<div class="note">配套代码里的 <code>overlap_score()</code> 用"中文单字+两字滑窗分词 + Jaccard 重合度"
+模拟向量检索的思想。它分不高，但完整演示了"打分→阈值→排序→截断"的骨架。</div>
+<div class="pagenum">7 / 100</div></section>
+<section class="page " id="p8"><div class="part-tag">第 0 章 · 预备知识</div><h1>记忆的生命周期</h1>
+<h2>一个记忆条目的一生</h2>
+<div class="flow"><span class="box">产生</span><span class="arr">→</span><span class="box">提取</span><span class="arr">→</span><span class="box">写入(带门槛)</span><span class="arr">→</span><span class="box">存储</span><span class="arr">→</span><span class="box">检索</span><span class="arr">→</span><span class="box">注入</span><span class="arr">→</span><span class="box">更新/淘汰(策展)</span></div>
+<ol>
+<li><b>产生</b>：对话中出现了值得记的信息（用户偏好、项目事实、踩坑经验）。</li>
+<li><b>提取</b>：谁来发现它？三种模式——模型自己主动写（调记忆工具）、后台评审自动提取
+（Hermes 的 background_review）、hook 无差别捕获（OpenClaw 的 session-memory）。</li>
+<li><b>写入门槛</b>：去重（已存在的拒写）、限容（超上限丢最旧）、冲突处理（新事实覆盖旧事实）。</li>
+<li><b>策展</b>（curation）：定期整理记忆库——合并同类、归档过期、修剪冗余（Hermes 的 curator.py）。</li>
+</ol>
+<h2>写入端比读取端更容易烂掉</h2>
+<div class="warn">实践中的最大教训：没有门槛的记忆库会退化成垃圾场。重复条目、过时事实、
+无关闲话越堆越多，检索质量随之崩塌。<b>写入端必须有"门"，读取端必须有"闸"。</b></div>
+<p>第 1-5 章会反复回到这张生命周期图，每家 agent 的差异都可以表述为：
+"它在哪些环节做了什么、没做哪些环节"。</p>
+<div class="pagenum">8 / 100</div></section>
+<section class="page " id="p9"><div class="part-tag">第 0 章 · 预备知识</div><h1>注入方式谱系</h1>
+<h2>读取侧的四个段位</h2>
+<table><tr><th>段位</th><th>做法</th><th>代表</th><th>代价</th></tr><tr><td>青铜：无记忆</td><td>消息列表原样堆</td><td>NaiveAgent</td><td>窗口爆炸</td></tr><tr><td>白银：工具化</td><td>记忆=工具，模型主动查</td><td>dsh + MCP server</td><td>模型可能忘记查</td></tr><tr><td>黄金：全量注入</td><td>小而精的记忆文件整个放进 prompt</td><td>Hermes / Claude Code 入口</td><td>记忆量受严格限制</td></tr><tr><td>王者：挑选注入</td><td>检索 + 相关性门控，只带相关的</td><td>OpenClaw / Claude Code memdir</td><td>工程复杂度高</td></tr></table>
+<h2>没有最好的，只有匹配记忆量的</h2>
+<ul>
+<li>记忆 &lt; 30 条：全量注入，简单可靠；</li>
+<li>30~500 条：挑选注入（关键词检索就够用）；</li>
+<li>&gt; 500 条或多人共享：向量库 + 门控 + 策展全上。</li>
+</ul>
+<div class="note">一个常被忽略的点：<span class="kw">注入的每个 token 都在稀释注意力</span>。
+记忆系统的终极指标不是"存了多少"，而是"每次任务带对了多少"。</div>
+<h2>本报告五个对象在谱系上的位置</h2>
+<div class="flow"><span class="box">NaiveAgent 青铜</span><span class="arr">→</span><span class="box">dsh 白银</span><span class="arr">→</span><span class="box">Hermes 黄金</span><span class="arr">→</span><span class="box">Claude Code 黄金+</span><span class="arr">→</span><span class="box">OpenClaw 王者</span></div>
+<div class="pagenum">9 / 100</div></section>
+<section class="page " id="p10"><div class="part-tag">第 0 章 · 预备知识</div><h1>五大对象与目录</h1>
+<h2>五个解剖对象</h2>
+<table><tr><th>对象</th><th>语言</th><th>一句话定位</th><th>第几章</th></tr><tr><td>Claude Code (claude-code-src)</td><td>TypeScript</td><td>文件记忆 + 双轨注入 + 四级压缩，工业级标杆</td><td>第 1 章</td></tr><tr><td>OpenClaw</td><td>TypeScript</td><td>SQLite 向量混合检索 + 召回代理，检索最讲究</td><td>第 2 章</td></tr><tr><td>Hermes</td><td>Python</td><td>写-提-策-注-压全链路，流水线最完整</td><td>第 3 章</td></tr><tr><td>DeepSeek-Harness (dsh)</td><td>TypeScript</td><td>零内建记忆，MCP 外接 + 事件化压缩</td><td>第 4 章</td></tr><tr><td>NaiveAgent</td><td>Python</td><td>全量拼接对照组：无长期记忆的朴素循环</td><td>第 5 章</td></tr></table>
+<h2>每章统一的分析框架</h2>
+<p>为了让五家能公平对比，每个 agent 都按同一套骨架分析：</p>
+<ol>
+<li><b>存储</b>：记忆放在哪？什么格式？有没有容量上限？</li>
+<li><b>写入</b>：谁触发写入？有没有去重/门槛？</li>
+<li><b>读取/注入</b>：全量还是检索？谁决定注入什么？注入到 prompt 的哪个位置？</li>
+<li><b>压缩</b>：多级压缩怎么分工？摘要怎么生成？</li>
+<li><b>可复现的 Python 核心</b>：该机制的 Python 教学版（配套 <code>agent_memory_lab_v2.py</code>）。</li>
+</ol>
+<div class="ok">每章最后都有"带 prompt 的真实例子"——你会亲眼看到记忆被拼进 system prompt 后的样子。</div>
+<div class="pagenum">10 / 100</div></section>
+<section class="page " id="p11"><div class="part-tag">第 0 章 · 预备知识</div><h1>token 经济学：为什么每个 token 都贵</h1>
+<h2>三个成本维度</h2>
+<ol>
+<li><b>钱</b>：API 按 token 计费，输入和输出分别计价。一次注入 5000 token 的记忆，
+每次调用都在为它付费。</li>
+<li><b>注意力</b>：上下文越长，模型对每条信息的"关注密度"越低，指令遵循和检索准确率都会下降。
+长上下文不是免费的容量，是稀释的注意力。</li>
+<li><b>延迟</b>：输入 token 直接拉长首字延迟。</li>
+</ol>
+<h2>一笔账：一个不带记忆管理的 agent</h2>
+<table><tr><th>项目</th><th>每轮 token</th><th>20 轮累计（无压缩）</th><th>20 轮累计（有压缩+检索）</th></tr><tr><td>system prompt + 记忆</td><td>2,000</td><td>40,000</td><td>20,000（检索后减半）</td></tr><tr><td>工具输出</td><td>8,000</td><td>160,000</td><td>30,000（microcompact 清旧）</td></tr><tr><td>对话历史</td><td>500</td><td>10,000</td><td>8,000（autoCompact 摘要）</td></tr><tr><td>合计</td><td>10,500</td><td>约 21 万</td><td>约 5.8 万</td></tr></table>
+<p class="src">数字为示意量级，用来说明"压缩 + 按需注入"的收益通常在 3~5 倍。</p>
+<h2>这就是为什么五家都要建记忆系统</h2>
+<div class="warn">没有记忆管理的 agent 不是"效果差一点"，而是在长任务里直接不可用——
+要么撑爆窗口报错，要么账单失控，要么模型在几万 token 的噪音里迷失，忘记最初的任务。</div>
+<div class="pagenum">11 / 100</div></section>
+<section class="page " id="p12"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>第 1 章导读：Claude Code 的记忆世界观</h1>
+<h2>分析对象</h2>
+<p>仓库 <span class="src">D:/memory/claude-code-src</span>（TypeScript，Claude Code 的源码级复刻）。</p>
+<h2>它的记忆世界观：记忆就是文件</h2>
+<p>Claude Code 对"记忆"的哲学非常克制：不建数据库、不训向量，<b>记忆就是磁盘上的 markdown 文件</b>。
+好处是彻底透明——用户可以随时打开看、直接改、用 git 管版本；模型自己用编辑工具就能维护它。
+代价是检索能力弱，所以它用"组织结构"弥补：重要事实压缩进入口文件，详细内容摊到记忆目录。</p>
+<h2>本章地图（17 页）</h2>
+<table><tr><th>小节</th><th>页码范围</th><th>内容</th></tr><tr><td>1.1 存储层</td><td>p13-15</td><td>MEMORY.md 入口 + memdir 目录 + 扫描清单</td></tr><tr><td>1.2 写入层</td><td>p16-17</td><td>模型工具写入 + 用户显式输入</td></tr><tr><td>1.3 读取层</td><td>p18-20</td><td>双轨注入：全量 + 挑选（findRelevantMemories）</td></tr><tr><td>1.4 压缩层</td><td>p21-24</td><td>micro / auto / reactive / 手动 四级压缩</td></tr><tr><td>1.5 Prompt 实例</td><td>p25-26</td><td>真实打印的注入后 system prompt</td></tr><tr><td>1.6 小结</td><td>p27-28</td><td>设计取舍 + Python 核心对照</td></tr></table>
+<div class="pagenum">12 / 100</div></section>
+<section class="page " id="p13"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.1 存储：MEMORY.md 入口文件</h1>
+<h2>入口文件：记忆系统的"首页"</h2>
+<p>源码 <span class="src">src/memdir/memdir.ts</span> 定义了入口文件常量：</p>
+<pre><code>ENTRYPOINT_NAME        = 'MEMORY.md'
+MAX_ENTRYPOINT_LINES   = 200      // 最多 200 行
+MAX_ENTRYPOINT_BYTES   = 25000    // 最多 25 KB</code></pre>
+<p>这两个上限是整个设计的支点：因为入口文件<b>必然全量注入</b> system prompt，
+所以必须从物理上限制它的体积。200 行能写什么？只能放最浓缩的事实：</p>
+<ul>
+<li>用户是谁、在做什么项目；</li>
+<li>强偏好（"报告必须用表格、注明单位"）；</li>
+<li>关键参数（"P99 阈值 320 ms"）；</li>
+<li>最近的重要决定。</li>
+</ul>
+<h2>超限怎么办：truncateEntrypointContent</h2>
+<p><span class="src">memdir.ts · buildMemoryPrompt / truncateEntrypointContent</span></p>
+<p>注入前会截断：保住前 200 行 / 25KB，其余丢弃。<b>截断而不是报错</b>——记忆系统必须永远假设
+"文件可能被用户或模型写爆"，任何环节都要能优雅降级。</p>
+<div class="note">为什么用 markdown 而不是 JSON/数据库？因为记忆的<b>生产者和消费者都是模型</b>，
+markdown 是模型读写最自然的格式；同时人类可直接审阅——记忆系统的可审计性在生产中极其重要。</div>
+<h2>真实源码（带注释）：入口文件常量与两级截断</h2>
+<p class="src">claude-code-src/src/memdir/memdir.ts:34-39 · truncateEntrypointContent（:57-103，节选，注释为讲解）</p>
+<pre><code>export const ENTRYPOINT_NAME = 'MEMORY.md'
+export const MAX_ENTRYPOINT_LINES = 200
+// ~125 chars/line at 200 lines. At p97 today; catches long-line indexes that
+// slip past the line cap (p100 observed: 197KB under 200 lines).
+// ↑ 源码注释原话：只限行数不够——真实用户写出过"200 行以内却 197KB"的索引
+export const MAX_ENTRYPOINT_BYTES = 25_000
+
+export function truncateEntrypointContent(raw: string): EntrypointTruncation {
+  const trimmed = raw.trim()
+  const contentLines = trimmed.split('\n')
+  // 行数、字节数两个维度各自判断是否超限
+  const wasLineTruncated = contentLines.length &gt; MAX_ENTRYPOINT_LINES
+  const wasByteTruncated = trimmed.length &gt; MAX_ENTRYPOINT_BYTES
+  if (!wasLineTruncated && !wasByteTruncated)
+    return { content: trimmed, lineCount, byteCount, wasLineTruncated, wasByteTruncated }
+  // 第一级：按行截断
+  let truncated = wasLineTruncated
+    ? contentLines.slice(0, MAX_ENTRYPOINT_LINES).join('\n')
+    : trimmed
+  // 第二级：按字节截断。cutAt 取换行符位置——宁可少留一行，
+  // 也不把一行从中间劈开（半行会被模型当成完整条目理解）
+  if (truncated.length &gt; MAX_ENTRYPOINT_BYTES) {
+    const cutAt = truncated.lastIndexOf('\n', MAX_ENTRYPOINT_BYTES)
+    truncated = truncated.slice(0, cutAt &gt; 0 ? cutAt : MAX_ENTRYPOINT_BYTES)
+  }
+  // 截断不是悄悄进行的：在注入内容末尾追加 WARNING，
+  // 让模型知道"索引只加载了一部分，长条目应移入主题文件"
+  return { content: truncated + `\n\n&gt; WARNING: ${ENTRYPOINT_NAME} is ${reason}...`,
+           lineCount, byteCount, wasLineTruncated, wasByteTruncated }
+}</code></pre>
+<div class="note">读源码的两个收获：① 字节截断回退到最近的换行符，绝不劈开条目；② 截断后注入一段 WARNING——降级必须让消费方（模型）知情，而不是静默丢数据。</div>
+<div class="pagenum">13 / 100</div></section>
+<section class="page " id="p14"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.1 存储：memdir 记忆目录</h1>
+<h2>详细记忆：一条一文件</h2>
+<p>入口文件装不下的细节，摊到记忆目录（auto memory directory）里，每条记忆一个 markdown 文件。
+文件头用 frontmatter 写一句话描述：</p>
+<pre><code>---
+description: 性能基线参数：订单接口 P99 阈值 320 ms，采样窗口 10 s
+---
+2026-06 标定记录……（这里才是详细内容）</code></pre>
+<h2>为什么强调 description 字段</h2>
+<p>因为 Claude Code 的检索机制<b>不读全文、只读描述</b>。检索时把所有文件的 description
+拼成一张清单发给小模型挑选——全文可能上万 token，描述只有十几个 token，
+这让"在几百个记忆文件里挑选"的成本变得可接受。</p>
+<h2>辅助模块</h2>
+<table><tr><th>文件</th><th>职责</th></tr><tr><td><code>memdir/paths.ts</code></td><td>getAutoMemPath()：记忆目录路径；isAutoMemoryEnabled()：功能开关</td></tr><tr><td><code>memdir/memoryScan.ts</code></td><td>扫描所有记忆文件的 frontmatter，生成描述清单（manifest）</td></tr><tr><td><code>memdir/memoryAge.ts</code></td><td>记忆时效：根据文件修改时间衰减记忆的新鲜度</td></tr><tr><td><code>memdir/teamMemPaths.ts</code></td><td>团队级记忆：多人共享的记忆目录</td></tr></table>
+<div class="note">团队级记忆是个容易忽略的设计：个人记忆（你自己的偏好）和团队记忆（项目规范）
+分开存、分开注入，权限和生命周期都不同。</div>
+<div class="pagenum">14 / 100</div></section>
+<section class="page " id="p15"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.1 存储：扫描清单（manifest）</h1>
+<h2>memoryScan.ts：给记忆库建立目录页</h2>
+<p><code>memoryScan</code> 遍历记忆目录，为每个文件提取 description，产出形如：</p>
+<pre><code>[
+  ("perf-baseline.md", "性能基线参数：订单接口 P99 阈值 320 ms…"),
+  ("report-style.md",    "用户偏好：报告用 markdown 表格，注明单位"),
+  ("coffee.md",          "团队咖啡偏好记录"),
+]</code></pre>
+<p>这就是一本"记忆图书馆的目录卡"。<b>目录卡的体积是 O(条数)，与每条记忆的长度无关</b>——
+哪怕有 500 个记忆文件，清单也可能只有几 KB。</p>
+<h2>配套代码还原</h2>
+<p><span class="src">agent_memory_lab_v2.py · ClaudeCodeMemory.scan_manifest()</span></p>
+<pre><code>def scan_manifest(self):
+    out = []
+    for fn in os.listdir(self.root):
+        if fn == "MEMORY.md" or not fn.endswith(".md"):
+            continue
+        head = open(os.path.join(self.root, fn), encoding="utf-8").read(400)
+        m = re.search(r"description:\s*(.+)", head)
+        out.append((fn, m.group(1) if m else fn))
+    return out   # [(文件名, 描述), ...] —— 与 memoryScan.ts 同构</code></pre>
+<div class="ok">教学要点：清单模式（先索引后取全文）是所有大规模检索系统的通用骨架，
+OpenClaw 的向量检索、Hermes 的 provider 检索本质都在做同一件事。</div>
+<h2>真实源码（带注释）：scanMemoryFiles 与清单格式</h2>
+<p class="src">claude-code-src/src/memdir/memoryScan.ts:35-77 · formatMemoryManifest:84-94（节选，注释为讲解）</p>
+<pre><code>const MAX_MEMORY_FILES = 200        // 清单最多 200 个文件
+const FRONTMATTER_MAX_LINES = 30    // 每个文件只读前 30 行
+
+export async function scanMemoryFiles(memoryDir, signal) {
+  const entries = await readdir(memoryDir, { recursive: true })
+  const mdFiles = entries.filter(
+    f =&gt; f.endsWith('.md') &amp;&amp; basename(f) !== 'MEMORY.md',  // 入口文件不进清单
+  )
+  const headerResults = await Promise.allSettled(   // 并发读；单个失败不拖垮整库
+    mdFiles.map(async (relativePath) =&gt; {
+      const { content, mtimeMs } = await readFileInRange(
+        filePath, 0, FRONTMATTER_MAX_LINES, ...)   // 只读文件头 30 行
+      const { frontmatter } = parseFrontmatter(content, filePath)
+      return { filename, filePath, mtimeMs,
+               description: frontmatter.description || null, ... }
+    }))
+  return headerResults.filter(r =&gt; r.status === 'fulfilled').map(r =&gt; r.value)
+    .sort((a, b) =&gt; b.mtimeMs - a.mtimeMs)   // 按修改时间 新→旧
+    .slice(0, MAX_MEMORY_FILES)                // 硬上限 200 条
+}
+
+export function formatMemoryManifest(memories) {  // 清单的真实长相：
+  return memories.map(m =&gt; {
+    const tag = m.type ? `[${m.type}] ` : ''
+    const ts = new Date(m.mtimeMs).toISOString()
+    return m.description
+      ? `- ${tag}${m.filename} (${ts}): ${m.description}`
+      : `- ${tag}${m.filename} (${ts})`
+  }).join('\n')
+}</code></pre>
+<div class="note">三个防失控细节：单文件只读 30 行、并发用 allSettled（一个文件损坏不影响整库）、清单截断到 200 条。教学版 <code>scan_manifest()</code> 的"只读前 400 字符"对应这里的 FRONTMATTER_MAX_LINES。</div>
+<div class="pagenum">15 / 100</div></section>
+<section class="page " id="p16"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.2 写入：模型用工具写记忆</h1>
+<h2>谁在写记忆？——模型自己</h2>
+<p>Claude Code 不做"自动提取记忆"的黑盒。它给模型提供文件读写工具，由模型在对话中
+<b>主动决定</b>把什么写进 MEMORY.md 或记忆文件。比如用户说"以后报告都用表格"，
+模型的推理链是：这是长期偏好 → 应该记住 → 调用编辑工具写入。</p>
+<h2>用户显式输入通道</h2>
+<p>用户也可以直接下指令。相关源码：</p>
+<table><tr><th>文件</th><th>职责</th></tr><tr><td><code>src/components/messages/UserMemoryInputMessage.tsx</code></td><td>处理用户显式的记忆输入（如以 # 开头的记忆指令）</td></tr><tr><td><code>src/components/memory/MemoryUpdateNotification.tsx</code></td><td>记忆文件被更新时给用户弹通知（透明性！）</td></tr><tr><td><code>src/components/FeedbackSurvey/useMemorySurvey.tsx</code></td><td>收集用户对记忆行为的反馈</td></tr></table>
+<h2>这个设计的好处与风险</h2>
+<div class="columns"><div>
+<h3>好处</h3>
+<ul><li>写入内容经过模型"理解和措辞"，质量高；</li>
+<li>行为透明：每次写入都可见、可撤销；</li>
+<li>不需要额外的提取模型，零额外成本。</li></ul>
+</div><div>
+<h3>风险</h3>
+<ul><li>模型可能"忘了去记"（主动性不可靠）；</li>
+<li>写入质量依赖主模型的判断力。</li></ul>
+<p>正因为有第一个风险，Hermes 才补了一条"后台评审自动提取"通道（第 3 章）。</p>
+</div></div>
+<div class="pagenum">16 / 100</div></section>
+<section class="page " id="p17"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.2 写入：写入内容的形态规范</h1>
+<h2>好记忆长什么样</h2>
+<p>从 Claude Code 的入口文件设计中能反推出它对"记忆条目"的规范：
+<b>一条记忆 = 一个可独立成立的原子事实</b>。</p>
+<table><tr><th>好例子</th><th>坏例子</th><th>为什么</th></tr><tr><td>报告必须用 markdown 表格输出</td><td>用户对输出格式有一些要求</td><td>不可执行：模型无法行动</td></tr><tr><td>接口 P99 基线 320 ms（2026-06 压测标定）</td><td>关于接口性能的讨论有好几次</td><td>不原子：含糊且无法验证</td></tr><tr><td>用户偏好先看图表再下结论，避免拍脑袋</td><td>用户喜欢很多工作流</td><td>要具体到能指导下一次行为</td></tr></table>
+<h2>时机：什么时候写</h2>
+<p>典型触发点（从源码的交互组件反推）：</p>
+<ol>
+<li>用户明确说"记住……"；</li>
+<li>用户纠正了模型的错误做法（下次该避免）；</li>
+<li>确立了新的项目事实（版本、路径、参数）；</li>
+<li>任务结束时复盘出可复用经验。</li>
+</ol>
+<div class="note">对照第 0 章的生命周期：Claude Code 把"提取"完全交给模型推理，
+把"门槛"交给文件体积上限（200 行截断），把"策展"交给模型和用户的日常编辑。
+每一步都很轻，组合起来却够用——这是它最值得学的设计态度。</div>
+<div class="pagenum">17 / 100</div></section>
+<section class="page " id="p18"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.3 读取：双轨注入的设计</h1>
+<h2>两条注入轨道</h2>
+<div class="flow"><span class="box">轨道A: MEMORY.md 全量注入(永远在场)</span><span class="arr">→</span><span class="box">轨道B: memdir 挑选注入(按任务携带)</span></div>
+<p>这是 Claude Code 记忆系统的灵魂设计：<b>重要的少量记忆永远在场，详细的多数记忆按需携带</b>。</p>
+<table><tr><th>维度</th><th>轨道 A：入口文件</th><th>轨道 B：记忆目录</th></tr><tr><td>体积</td><td>≤200 行 / 25KB，严格受限</td><td>理论无上限（由检索控制）</td></tr><tr><td>注入时机</td><td>每次请求，拼入 system prompt</td><td>检索命中才注入</td></tr><tr><td>谁决定注入</td><td>无人决定——无条件</td><td>小模型从描述清单中挑选</td></tr><tr><td>典型内容</td><td>身份、强偏好、关键参数</td><td>详细配置、历史记录、教程性内容</td></tr></table>
+<h2>防重复：轨道 B 排除轨道 A</h2>
+<p><code>findRelevantMemories</code> 明确排除已在 system prompt 中的入口文件，
+避免同一条记忆以两种形式重复占用窗口。听起来简单，但这是很多自研记忆系统会踩的坑：
+<b>注入去重必须在"注入层"做，不能指望模型自己忽略重复。</b></p>
+<div class="pagenum">18 / 100</div></section>
+<section class="page " id="p19"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.3 读取：findRelevantMemories 逐步拆解</h1>
+<h2>源码位置</h2>
+<p><span class="src">src/memdir/findRelevantMemories.ts:40 · findRelevantMemories()</span></p>
+<h2>算法五步</h2>
+<ol>
+<li><b>取清单</b>：调用 memoryScan 拿到所有 (文件名, description) 对；</li>
+<li><b>排除入口</b>：MEMORY.md 已在轨道 A，剔除；</li>
+<li><b>构造挑选请求</b>：把清单 + 当前任务（sideQuery）发给一个小模型（Sonnet），
+系统提示词 <code>SELECT_MEMORIES_SYSTEM_PROMPT</code> 要求它返回与任务相关的文件；</li>
+<li><b>截断</b>：上限 5 个——注意真实源码里没有独立常量，"up to 5" 直接写在挑选提示词文本里（见下方源码），防止"全都相关"的失控；</li>
+<li><b>读取全文</b>：只把选中的 5 个文件读出来，注入上下文。</li>
+</ol>
+<h2>成本账</h2>
+<p>挑选本身只花"清单 + 任务"的 token（清单 O(条数)，每条只有一句话）。
+用几百 token 的挑选成本，换取避免了"全库注入"的几千上万 token——划算。</p>
+<h2>配套代码还原（用打分代替小模型）</h2>
+<pre><code>def find_relevant_memories(self, query):
+    scored = []
+    for fn, desc in self.scan_manifest():
+        s = overlap_score(query, desc + " " + fn)
+        if s > 0.02:
+            scored.append((s, fn, desc))
+    scored.sort(reverse=True)
+    return [(fn, desc) for _, fn, desc in scored[: self.RELEVANT_LIMIT]]</code></pre>
+<h2>真实源码（带注释）：挑选提示词与主流程</h2>
+<p class="src">claude-code-src/src/memdir/findRelevantMemories.ts:19-25（提示词）· :40-78（主函数，节选，注释为讲解）</p>
+<pre><code>const SELECT_MEMORIES_SYSTEM_PROMPT = `You are selecting memories that will be
+useful to Claude Code as it processes a user's query. ...
+Return a list of filenames ... (up to 5).
+// ↑ 5 条上限没有独立常量，直接写死在提示词文本里
+- If you are unsure if a memory will be useful ..., then do not include it.
+  // ↑ 宁缺毋滥：不确定有用就不选——这是"挑选"与"检索排序"的本质区别
+- If there are no memories in the list that would clearly be useful,
+  feel free to return an empty list.
+  // ↑ 允许空选：无关任务不注入任何记忆（与 OpenClaw 的 NONE 同思想）
+- If a list of recently-used tools is provided, do not select memories that
+  are usage reference or API documentation for those tools ... DO still select
+  memories containing warnings, gotchas, or known issues about those tools.
+  // ↑ 精妙细节：正在使用的工具不需要用法文档，但"坑"类记忆恰恰此时最有用`
+
+export async function findRelevantMemories(query, memoryDir, signal, ...):
+  Promise&lt;RelevantMemory[]&gt; {
+  // 1. 扫描全部记忆文件头（不读全文），并排除已注入过的条目
+  const memories = (await scanMemoryFiles(memoryDir, signal)).filter(
+    m =&gt; !alreadySurfaced.has(m.filePath),
+  )
+  if (memories.length === 0) return []
+  // 2. 让小模型（Sonnet）读"文件名+描述"清单，返回选中的文件名；
+  //    输出走 JSON Schema 约束（selected_memories: string[]），max_tokens=256
+  const selectedFilenames = await selectRelevantMemories(query, memories, ...)
+  // 3. 文件名反查元数据；挑选失败/解析失败一律返回 []（降级而非报错）
+  return selected.map(m =&gt; ({ path: m.filePath, mtimeMs: m.mtimeMs }))
+}</code></pre>
+<div class="pagenum">19 / 100</div></section>
+<section class="page " id="p20"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.3 读取：注入的最终形态（prompt 例子预览）</h1>
+<h2>拼装结果</h2>
+<p>以下为配套代码真实打印（完整版见第 8 章 p95）：</p>
+<pre><code>你是编程助手 Claude Code。
+
+# 自动记忆（长期）
+- 用户在做订单服务的接口性能优化
+- 报告必须用 markdown 表格、注明单位 ms
+- P99 阈值 320 ms
+
+## 与当前任务相关的记忆文件
+- perf-baseline.md: 性能基线参数：订单接口 P99 阈值 320 ms，采样窗口 10 s</code></pre>
+<h2>逐段解释</h2>
+<ul>
+<li><b>第 2-5 行</b>：轨道 A。MEMORY.md 的全部内容，无条件在场；</li>
+<li><b>第 7-8 行</b>：轨道 B。只有当任务（"分析接口延迟出报告"）与 perf-baseline.md 的描述
+匹配时才出现；</li>
+<li><b>coffee.md 永远不出现</b>：它在记忆库里，但描述与任务无关——挑选机制把它挡在门外。</li>
+</ul>
+<div class="ok">观察 prompt 的措辞："与当前任务相关的记忆文件"先给文件名和描述，
+真实实现中随后会读入选中文件的全文追加。分两层注入是为了即使检索错了，
+浪费的也只是描述那一行。</div>
+<div class="pagenum">20 / 100</div></section>
+<section class="page " id="p21"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.4 压缩：四级体系总览</h1>
+<h2>Claude Code 的四道防线</h2>
+<table><tr><th>级别</th><th>源码</th><th>触发时机</th><th>动作</th></tr><tr><td>① microCompact</td><td>services/compact/microCompact.ts</td><td>工具结果老化后</td><td>旧工具输出→占位符</td></tr><tr><td>② autoCompact</td><td>services/compact/autoCompact.ts</td><td>上下文逼近窗口上限</td><td>旧消息→结构化摘要</td></tr><tr><td>③ reactiveCompact</td><td>services/compact/reactiveCompact.ts</td><td>API 报错：上下文超限</td><td>紧急压缩后重试</td></tr><tr><td>④ /compact 手动</td><td>commands/compact/compact.ts</td><td>用户敲命令</td><td>同 ②，用户控制时机</td></tr></table>
+<h2>为什么要分四级</h2>
+<ul>
+<li><b>① 的信息损失最小</b>：工具输出本来就该被"结果已被吸收"取代；</li>
+<li><b>② 是主力</b>：真正把几十轮对话滚成摘要；</li>
+<li><b>③ 是保险</b>：② 的阈值估计失手时（比如用户粘贴了超大文件），API 会直接拒绝请求，
+③ 兜住这种情况；</li>
+<li><b>④ 是控制权</b>：把决定权还给用户。</li>
+</ol>
+<div class="note">压缩体系的通用原则：<b>损失小的先做、损失大的后做、全部失手要有兜底</b>。
+这个次序在 OpenClaw 和 Hermes 里同样成立。</div>
+<h2>真实源码（带注释）：③ reactive 兜底与 ④ 手动 /compact 的调度</h2>
+<p class="src">claude-code-src/src/services/compact/reactiveCompact.ts:48-97 · src/commands/compact/compact.ts:42-123（节选，注释为讲解）</p>
+<pre><code>// reactiveCompact.ts —— 只认"API 报 prompt too long"这一种错误才触发
+export const isWithheldPromptTooLong = (message) =&gt;
+  message.type === 'assistant' &amp;&amp; message.isApiErrorMessage
+  &amp;&amp; isPromptTooLongMessage(message)
+
+export const tryReactiveCompact = async ({ hasAttempted, aborted, messages }) =&gt; {
+  if (hasAttempted || aborted) return null    // 只试一次，防"压缩→仍超→再压"死循环
+  try {
+    return await compactConversation(messages, ..., /* reactive */ true, ...)
+  } catch (error) {
+    logForDebugging('reactiveCompact: emergency compaction failed', ...)
+    return null                               // 失败优雅返回，上层提示用户手动处理
+  }
+}
+
+// commands/compact/compact.ts —— 手动 /compact 的优先级链：
+// ① 无自定义指令 → 先试 session-memory 压缩（便宜、正交），成功即返回
+if (!customInstructions) {
+  const sessionMemoryResult = await trySessionMemoryCompaction(messages, ...)
+  if (sessionMemoryResult) return { type: 'compact', ... }
+}
+// ② reactive-only 模式 → 走 reactive 路径
+if (reactiveCompact?.isReactiveOnlyMode())
+  return await compactViaReactive(...)
+// ③ 传统路径：先 microcompact 减负，再 compactConversation 摘要
+const microcompactResult = await microcompactMessages(messages, context)
+const result = await compactConversation(microcompactResult.messages, ...)
+// ④ 传统压缩替换了全部旧消息 → 旧消息 UUID 不复存在，
+//    "已摘要到哪"的游标必须重置，否则后续增量摘要会找错位置
+setLastSummarizedMessageId(undefined)</code></pre>
+<div class="pagenum">21 / 100</div></section>
+<section class="page " id="p22"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.4 压缩：microCompact 细节</h1>
+<h2>只清该清的：COMPACTABLE_TOOLS 白名单</h2>
+<p>microCompact 不是无差别清理，源码维护了一个可压缩工具的白名单：</p>
+<pre><code>COMPACTABLE_TOOLS = {FileRead, Grep, Glob, WebSearch,
+                    WebFetch, Shell, Edit, Write}
+// 清理后占位符：'[Old tool result content cleared]'</code></pre>
+<p>白名单的含义：这些工具的输出是<b>环境快照</b>——随时可以重新执行获得。
+而模型自己的推理、用户的指令不在白名单里，永不被清。</p>
+<h2>时间基清理与缓存</h2>
+<p><code>microCompact.ts</code> 实现了两种模式：<span class="kw">time-based microcompact</span>
+（按时间把老工具结果清掉）和 <span class="kw">cached microcompact</span>（结合 prompt 缓存优化，
+尽量不破坏缓存的连续性——清得太频繁会打破 API 的 KV 缓存，反而更贵）。</p>
+<h2>配套代码还原</h2>
+<pre><code>@staticmethod
+def microcompact(messages, keep_recent_tool_results=2):
+    tool_idx = [i for i, m in enumerate(messages) if m["role"] == "tool"]
+    to_clear = set(tool_idx[:-keep_recent_tool_results])
+    out = []
+    for i, m in enumerate(messages):
+        if i in to_clear:
+            out.append({**m, "content": "[Old tool result content cleared]"})
+        else:
+            out.append(m)
+    return out   # 最近 2 条工具结果一定保留</code></pre>
+<div class="ok">细节里的学问：<b>"保留最近 N 条工具结果"</b>很重要——刚产生的结果模型马上要用，
+清了会导致模型重复调用工具。</div>
+<h2>真实源码（带注释）：白名单与两种模式的调度</h2>
+<p class="src">claude-code-src/src/services/compact/microCompact.ts:36-50 · :257-297（节选，注释为讲解）</p>
+<pre><code>export const TIME_BASED_MC_CLEARED_MESSAGE = '[Old tool result content cleared]'
+
+// 只有这些工具的结果可被清：输出是"环境快照"，重跑即可复原
+const COMPACTABLE_TOOLS = new Set&lt;string&gt;([
+  FILE_READ_TOOL_NAME, ...SHELL_TOOL_NAMES, GREP_TOOL_NAME,
+  GLOB_TOOL_NAME, WEB_SEARCH_TOOL_NAME, WEB_FETCH_TOOL_NAME,
+  FILE_EDIT_TOOL_NAME, FILE_WRITE_TOOL_NAME,
+])
+
+export async function microcompactMessages(messages, toolUseContext?, querySource?) {
+  // 模式一：time-based，先跑且短路。距上条 assistant 消息超过阈值分钟数
+  // → 服务端 KV 缓存已冷，前缀反正要整体重算，此时清旧结果"免费"——
+  // 先清再发请求，缩小需要重算的前缀；并跳过模式二（它假设缓存是热的）
+  const timeBasedResult = maybeTimeBasedMicrocompact(messages, querySource)
+  if (timeBasedResult) return timeBasedResult
+  // 模式二：cached。缓存还热时，原地编辑历史里"可清"的旧结果而不破坏
+  // 缓存前缀；只允许主线程跑（fork 出的子 agent 不得注册清理状态）
+  if (feature('CACHED_MICROCOMPACT')) {
+    ...
+    if (mod.isCachedMicrocompactEnabled() &&
+        mod.isModelSupportedForCacheEditing(model) &&
+        isMainThreadSource(querySource)) {
+      return await cachedMicrocompactPath(messages, querySource)
+    }
+  }
+  return { messages }
+}</code></pre>
+<div class="warn">这里藏着 prompt 缓存的经济学：清不清旧工具结果，取决于服务端缓存是冷是热——冷了清是白赚，热了要改用"不破坏缓存前缀"的编辑方式。教学版"保留最近 N 条"对应源码里的 keepRecent 配置（time-based 清理时同样保留最近 N 条不动）。</div>
+<div class="pagenum">22 / 100</div></section>
+<section class="page " id="p23"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.4 压缩：autoCompact 阈值设计</h1>
+<h2>什么时候触发：给输出留余量</h2>
+<p><span class="src">autoCompact.ts · getEffectiveContextWindowSize()</span></p>
+<p>触发条件不是"用满窗口"，而是：</p>
+<pre><code>有效窗口 = 模型窗口 - 预留输出空间(20k token)
+触发压缩：已用 token > 有效窗口 - 安全边际</code></pre>
+<p>预留 20k 的原因：压缩后模型要生成摘要 + 回复，如果输入把窗口吃满，输出就没有空间了。
+这个余量还支持环境变量 <code>CLAUDE_CODE_AUTO_COMPACT_WINDOW</code> 覆盖。</p>
+<h2>摘要替换什么</h2>
+<ol>
+<li>确定保留区间：最近若干轮 + 所有未完成话题相关消息；</li>
+<li>把更早的消息交给模型生成结构化摘要；</li>
+<li>摘要作为一条特殊消息放回，其后接保留的原文；</li>
+<li><code>postCompactCleanup.ts</code> 做压缩后的清理（失效的工具引用等）。</li>
+</ol>
+<h2>配套代码还原</h2>
+<pre><code>@staticmethod
+def autocompact(messages, threshold=12, keep_recent=3):
+    if len(messages) <= threshold:
+        return messages, False
+    cut = len(messages) - keep_recent
+    old = messages[:cut]
+    users = [m["content"] for m in old if m["role"] == "user"][:3]
+    summary = ("[摘要] 用户做过: " + " / ".join(map(str, users)))
+    return [{"role": "user", "content": summary}] + messages[cut:], True</code></pre>
+<h2>真实源码（带注释）：20k 预留与分级缓冲</h2>
+<p class="src">claude-code-src/src/services/compact/autoCompact.ts:28-49 · :62-82（节选，注释为讲解）</p>
+<pre><code>// Reserve this many tokens for output during compaction
+// Based on p99.99 of compact summary output being 17,387 tokens.
+// ↑ 预留 20k 不是拍脑袋：实测压缩摘要输出的 p99.99 是 17387 token，留足余量
+const MAX_OUTPUT_TOKENS_FOR_SUMMARY = 20_000
+
+export function getEffectiveContextWindowSize(model: string): number {
+  const reservedTokensForSummary = Math.min(
+    getMaxOutputTokensForModel(model), MAX_OUTPUT_TOKENS_FOR_SUMMARY)
+  let contextWindow = getContextWindowForModel(model, getSdkBetas())
+  // 环境变量可压小窗口（测试/省成本），但不能超过模型上限
+  const autoCompactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW
+  if (autoCompactWindow) {
+    const parsed = parseInt(autoCompactWindow, 10)
+    if (!isNaN(parsed) && parsed &gt; 0)
+      contextWindow = Math.min(contextWindow, parsed)
+  }
+  return contextWindow - reservedTokensForSummary   // 有效窗口 = 窗口 - 预留
+}
+
+export const AUTOCOMPACT_BUFFER_TOKENS = 13_000
+// 缓冲按窗口大小分级：窗口越大，估算误差也被放大，缓冲随之加宽
+export function getAutocompactBufferTokens(model: string): number {
+  const effectiveWindow = getEffectiveContextWindowSize(model)
+  if (effectiveWindow &gt;= 800_000) return 50_000
+  if (effectiveWindow &gt;= 400_000) return 30_000
+  return AUTOCOMPACT_BUFFER_TOKENS    // 常规窗口：13k
+}
+// 触发线 = 有效窗口 - 缓冲；另有手动压缩缓冲 3k，
+// 以及熔断器 MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3（连续失败 3 次即停）</code></pre>
+<div class="pagenum">23 / 100</div></section>
+<section class="page " id="p24"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.4 压缩：SessionMemory 与压缩的跟踪</h1>
+<h2>压缩之后，"进行到哪了"不能丢</h2>
+<p><span class="src">src/services/SessionMemory/sessionMemory.ts · sessionMemoryCompact.ts</span></p>
+<p>Claude Code 维护一个 SessionMemory 记录会话进行状态，其中关键字段是
+<code>setLastSummarizedMessageId</code>——记录"摘要覆盖到了哪条消息"。
+有了这个游标，压缩可以增量进行：下次压缩只处理游标之后的新消息，已摘要过的不再重复处理。</p>
+<h2>压缩是危险的手术</h2>
+<div class="warn">压缩一旦出错（切掉了正在使用的上下文、摘要遗漏关键决定），用户会直接感受到
+"agent 突然失忆"。所以各家的压缩实现都围绕三个可靠性问题打转：
+<b>何时压（阈值）、压多少（切点）、压完怎么接（游标/围栏）</b>。
+Hermes 甚至实现了"压缩提交围栏"防止压缩中途崩溃丢失历史（见 p52）。</div>
+<h2>本章压缩小结</h2>
+<div class="flow"><span class="box">micro: 清旧工具结果(无损)</span><span class="arr">→</span><span class="box">auto: 摘要替换(有损,主力)</span><span class="arr">→</span><span class="box">reactive: 超限兜底</span><span class="arr">→</span><span class="box">manual: 用户控制</span></div>
+<h2>真实源码（带注释）：游标的更新与消费</h2>
+<p class="src">claude-code-src/src/services/SessionMemory/sessionMemory.ts:491-502 · sessionMemoryUtils.ts:43-69（节选，注释为讲解）</p>
+<pre><code>/**
+ * Updates lastSummarizedMessageId after successful extraction.
+ * Only sets it if the last message doesn't have tool calls
+ * (to avoid orphaned tool_results).
+ * ↑ 注释即设计：游标不能停在"还有未决工具调用"的消息上——
+ *   否则按游标切分会制造孤儿 tool_result（有结果、无调用）
+ */
+function updateLastSummarizedMessageIdIfSafe(messages) {
+  if (!hasToolCallsInLastAssistantTurn(messages)) {
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage?.uuid) setLastSummarizedMessageId(lastMessage.uuid)
+  }
+}
+
+// sessionMemoryUtils.ts —— 游标就是模块级共享的一个字符串：
+let lastSummarizedMessageId: string | undefined
+export function getLastSummarizedMessageId() { return lastSummarizedMessageId }
+export function setLastSummarizedMessageId(id) { lastSummarizedMessageId = id }
+// 消费方 sessionMemoryCompact.ts 用它定位消息切分点，只保留游标之后的消息；
+// 手动 /compact 走传统路径替换全部消息后，游标被重置为 undefined（见 p21）</code></pre>
+<div class="pagenum">24 / 100</div></section>
+<section class="page " id="p25"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.5 Prompt 实例：完整对话片段</h1>
+<h2>把 p20 的 system prompt 放进真实对话里</h2>
+<p>假设用户第 10 轮提问"帮我分析这次压测的接口延迟，出报告"。模型实际收到的开头是：</p>
+<pre><code>system: 你是编程助手 Claude Code。
+
+# 自动记忆（长期）
+- 用户在做订单服务的接口性能优化
+- 报告必须用 markdown 表格、注明单位 ms
+- P99 阈值 320 ms
+
+## 与当前任务相关的记忆文件
+- perf-baseline.md: 性能基线参数：订单接口 P99 阈值 320 ms，采样窗口 10 s
+
+user: 帮我分析这次压测的接口延迟，出报告
+assistant: [调用 Read 工具读取 perf-baseline.md]
+tool: 2026-06 标定记录：P99 阈值 320 ms…（详细内容）
+assistant: 我将按基线 320 ms 对照。报告将用 markdown 表格…
+[第 20 轮，上下文将满]
+system/user: [摘要] 用户在做订单接口延迟分析；已读取标定文件；报告要求：表格+ms 单位…</code></pre>
+<h2>注意三个细节</h2>
+<ol>
+<li>模型收到记忆后<b>主动去读了基线文件的全文</b>——轨道 B 的描述注入引导了这一步；</li>
+<li>"表格 + ms"这两个偏好没有经过用户重复，直接生效——轨道 A 的价值；</li>
+<li>第 20 轮压缩后，摘要里保留了"报告要求"——好的摘要策略会保留约束类信息。</li>
+</ol>
+<div class="pagenum">25 / 100</div></section>
+<section class="page " id="p26"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.5 Prompt 实例：压缩前后的对照</h1>
+<h2>microcompact 前后（真实运行输出）</h2>
+<pre><code>--- 压缩前 ---
+[user]  q1
+[tool]  很长的旧工具输出A
+[tool]  很长的旧工具输出B
+[tool]  刚产生的工具输出C
+
+--- microcompact 后 ---
+[user]  q1
+[tool]  [Old tool result content cleared]
+[tool]  很长的旧工具输出B
+[tool]  刚产生的工具输出C</code></pre>
+<p>只清最旧的 A；B 仍在白名单但没轮到；C 是新结果必须保留。</p>
+<h2>autoCompact 前后（真实运行输出）</h2>
+<pre><code>触发压缩: True
+15 条 -> 4 条
+首条: [摘要] 用户做过: 任务0 / 任务1 / 任务2；其间执行了 0 次工具调用。</code></pre>
+<div class="note">真实实现的摘要远比这精细（结构化模板：目标/完成/未完成/决定/坑），
+教学版只演示骨架。摘要质量直接决定压缩后 agent 的表现，值得专门打磨。</div>
+<div class="pagenum">26 / 100</div></section>
+<section class="page " id="p27"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.6 小结：Claude Code 的设计取舍</h1>
+<h2>它选择了什么、放弃了什么</h2>
+<table><tr><th>选择</th><th>放弃</th><th>理由</th></tr><tr><td>markdown 文件存储</td><td>数据库/向量库</td><td>透明、可审计、模型可维护</td></tr><tr><td>入口全量注入</td><td>节省每个 token</td><td>关键偏好必须 100% 生效</td></tr><tr><td>小模型挑选注入</td><td>嵌入向量检索</td><td>挑选可解释、零基础设施</td></tr><tr><td>四级压缩</td><td>单一压缩策略</td><td>损失分级，兜底完备</td></tr></table>
+<h2>三层记忆一览（浓缩版）</h2>
+<div class="flow"><span class="box">MEMORY.md(全量)</span><span class="arr">→</span><span class="box">memdir 描述清单(挑选)</span><span class="arr">→</span><span class="box">会话摘要(压缩)</span></div>
+<h2>可以直接抄走的三条经验</h2>
+<ol>
+<li><b>给全量注入的记忆设物理上限</b>（行数+字节数双限制，超限截断不报错）；</li>
+<li><b>检索层只传描述不传全文</b>，成本与记忆库大小解耦；</li>
+<li><b>压缩从"清工具输出"开始</b>，白名单 + 保留最近 N 条。</li>
+</ol>
+<div class="pagenum">27 / 100</div></section>
+<section class="page " id="p28"><div class="part-tag">第 1 章 · Claude Code：文件记忆与双轨注入</div><h1>1.6 小结：与配套 Python 代码的对照表</h1>
+<h2>真实源码 ↔ 教学实现</h2>
+<table><tr><th>真实机制</th><th>真实源码</th><th>教学实现 (agent_memory_lab_v2.py)</th></tr><tr><td>入口文件常量</td><td>memdir.ts:44-49 (200行/25KB)</td><td>MAX_ENTRY_LINES = 6</td></tr><tr><td>描述清单扫描</td><td>memdir/memoryScan.ts</td><td>scan_manifest()</td></tr><tr><td>相关记忆挑选</td><td>memdir/findRelevantMemories.ts:40</td><td>find_relevant_memories()</td></tr><tr><td>双轨注入</td><td>memdir.ts · buildMemoryPrompt</td><td>build_system_prompt(query)</td></tr><tr><td>micro 压缩</td><td>services/compact/microCompact.ts</td><td>microcompact()</td></tr><tr><td>auto 压缩</td><td>services/compact/autoCompact.ts</td><td>autocompact()</td></tr></table>
+<h2>建议的动手顺序</h2>
+<ol>
+<li>运行 <code>python agent_memory_lab_v2.py</code>，看第 1 节输出；</li>
+<li>修改 <code>RELEVANT_LIMIT</code> 和挑选阈值，观察注入内容变化；</li>
+<li>把 <code>find_relevant_memories</code> 的打分换成你自己想的相似度；</li>
+<li>给 <code>write_entrypoint</code> 加"去重 + 淘汰最旧"逻辑（学第 3 章 Hermes 的写门槛）。</li>
+</ol>
+<div class="ok">完成这四步，你就掌握了 Claude Code 记忆系统 80% 的核心思想。</div>
+<div class="pagenum">28 / 100</div></section>
+<section class="page " id="p29"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>第 2 章导读：OpenClaw 的记忆世界观</h1>
+<h2>分析对象</h2>
+<p>仓库 <span class="src">D:/memory/openclaw</span>（TypeScript monorepo）。</p>
+<h2>它的记忆世界观：记忆是可检索的数据</h2>
+<p>如果说 Claude Code 的哲学是"记忆即文件"，OpenClaw 的哲学就是
+<b>"记忆即数据库"</b>：记忆条目存进 SQLite（带向量扩展），配全文索引，靠打分检索，
+再由一个"召回代理"决定注入什么。它把记忆当成一个独立的检索系统工程来做，
+是五家里检索侧最讲究的。</p>
+<h2>本章地图（16 页）</h2>
+<table><tr><th>小节</th><th>页码范围</th><th>内容</th></tr><tr><td>2.1 存储层</td><td>p30-32</td><td>memory-core：SQLite + sqlite-vec + FTS</td></tr><tr><td>2.2 写入层</td><td>p33-35</td><td>session-memory hook 自动捕获</td></tr><tr><td>2.3 读取层</td><td>p36-40</td><td>混合检索打分 + 召回代理门控</td></tr><tr><td>2.4 压缩层</td><td>p41-42</td><td>shouldCompact + 结构化摘要</td></tr><tr><td>2.5 Prompt 实例</td><td>p43</td><td>注入/不注入的两种真实输出</td></tr><tr><td>2.6 小结</td><td>p44</td><td>取舍 + Python 对照</td></tr></table>
+<div class="pagenum">29 / 100</div></section>
+<section class="page " id="p30"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.1 存储：SQLite 一库三用</h1>
+<h2>memory-core 插件</h2>
+<p><span class="src">extensions/memory-core/src/memory/manager-db.ts</span></p>
+<p>OpenClaw 用一个 SQLite 文件同时承担三种索引角色：</p>
+<ol>
+<li><b>主表</b>：记忆条目（文本、时间戳、来源、重要性等元数据）；</li>
+<li><b>向量索引</b>：加载 <code>sqlite-vec</code> 扩展，为每条记忆存嵌入向量，支持 KNN 近邻检索；</li>
+<li><b>全文索引</b>：SQLite 内建 FTS，支持关键词检索。</li>
+</ol>
+<pre><code>// manager-db.ts：启动时检查 sqlite_master，按需加载 sqlite-vec
+// 一个 .sqlite 文件 = 记忆主表 + 向量索引 + FTS 索引</code></pre>
+<h2>工程拆分：mixin 模式</h2>
+<p>记忆管理器被拆成几十个 mixin 文件，各管一件事：</p>
+<table><tr><th>mixin 文件</th><th>职责</th></tr><tr><td>manager.ts</td><td>主入口，组装所有 mixin</td></tr><tr><td>manager-embedding-ops.ts / embeddings.ts / local-embedding-provider.ts</td><td>嵌入生成（支持本地嵌入模型）</td></tr><tr><td>manager-search-knn.ts</td><td>KNN 向量检索（放子进程执行，避免阻塞主线程）</td></tr><tr><td>manager-fts-state.ts / manager-vector-write.ts</td><td>两种索引的写入维护</td></tr><tr><td>hybrid.ts / mmr.ts</td><td>混合检索打分 / 多样性重排(MMR)</td></tr><tr><td>temporal-decay.ts / importance.ts</td><td>时间衰减 / 重要性评分</td></tr></table>
+<h2>真实源码（带注释）：一个 .sqlite 文件如何长出向量能力</h2>
+<p class="src">openclaw/extensions/memory-core/src/memory/manager-db.ts:63-86 · :151-167（节选，注释为讲解）</p>
+<pre><code>function tableExists(db, schema, tableName) {   // 查 sqlite_master 判断表在不在
+  const row = db.prepare(
+    `SELECT 1 AS ok FROM ${schema}.sqlite_master WHERE type='table' AND name=?`
+  ).get(tableName)
+  return row?.ok === 1
+}
+
+function hasSqliteVecExtension(db) {             // 探测 vec 扩展是否已加载
+  try {
+    const row = db.prepare("SELECT vec_version() AS version").get()
+    return typeof row?.version === 'string' &amp;&amp; row.version.trim().length &gt; 0
+  } catch { return false }                       // 没加载就当没有，不报错
+}
+
+// 发布重建索引前：表里有向量列但扩展没加载 → 现在加载
+if (tableExists(targetDb, SCHEMA, "memory_index_chunks_vec")
+    &amp;&amp; !hasSqliteVecExtension(targetDb)) {
+  const loaded = await loadSqliteVecExtension({ db: targetDb, extensionPath })
+  if (!loaded.ok) throw new Error('Failed to load sqlite-vec ...')
+}</code></pre>
+<div class="note">工程细节：sqlite-vec 是运行时可加载扩展而非编译期依赖——探测（<code>vec_version()</code>）→ 按需加载 → 失败硬报错。"向量检索可用"这件事在重建索引前就被确认，而不是等查询时才炸。</div>
+<div class="pagenum">30 / 100</div></section>
+<section class="page " id="p31"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.1 存储：时间衰减与重要性</h1>
+<h2>记忆不是平等的：temporal-decay.ts</h2>
+<p>记忆条目带时间属性，检索打分时按"陈旧度"衰减——三个月前的一次对话记录，
+相关性分数要打折扣。这让"新事实自然压过旧事实"，是数据化记忆库相比文件记忆的优势：
+<b>文件很难按条目算时间权重，数据库一行 SQL 的事</b>。</p>
+<h2>importance.ts：重要性评分</h2>
+<p>条目可带重要性权重（如"用户反复强调的事"分高），检索时参与排序。
+这实际上是给"策展"提供了数据基础：低分条目就是修剪候选。</p>
+<h2>另一条后端路线：memory-lancedb</h2>
+<p><span class="src">extensions/memory-lancedb/</span></p>
+<p>OpenClaw 同时维护一个 LanceDB 向量库后端（lancedb-store / lancedb-runtime /
+lancedb-schema / auto-recall / memory-policy），说明它的存储层是
+<b>可插拔抽象</b>——SQLite 适合单机轻量场景，LanceDB 适合大规模向量检索。</p>
+<table><tr><th>后端</th><th>适合场景</th><th>关键文件</th></tr><tr><td>SQLite + sqlite-vec</td><td>单机、中小规模、零运维</td><td>extensions/memory-core/</td></tr><tr><td>LanceDB</td><td>大规模向量、独立服务</td><td>extensions/memory-lancedb/</td></tr></table>
+<div class="note">还有文件级补充：<code>src/memory/root-memory-files.ts</code>——
+数据库之外仍保留少量根级 markdown 文件（类似 Claude Code 的入口文件思路）。
+两家在对方的地盘上都留了一手，没有非此即彼。</div>
+<h2>真实源码（带注释）：半衰期衰减公式</h2>
+<p class="src">openclaw/extensions/memory-core/src/memory/temporal-decay.ts:15-43（注释为讲解）</p>
+<pre><code>function toDecayLambda(halfLifeDays: number): number {
+  if (!Number.isFinite(halfLifeDays) || halfLifeDays &lt;= 0) return 0
+  return Math.LN2 / halfLifeDays     // λ = ln2 / 半衰期：30 天 → λ ≈ 0.0231
+}
+
+function calculateTemporalDecayMultiplier({ ageInDays, halfLifeDays }) {
+  const lambda = toDecayLambda(halfLifeDays)
+  const clampedAge = Math.max(0, ageInDays)      // 年龄不为负
+  if (lambda &lt;= 0 || !Number.isFinite(clampedAge)) return 1
+  return Math.exp(-lambda * clampedAge)          // 乘子 = e^(-λ·age)
+}
+
+function applyTemporalDecayToScore({ score, ageInDays, halfLifeDays }) {
+  return score * calculateTemporalDecayMultiplier(...)  // 相关分 × 时间乘子
+}
+// 默认配置：半衰期 30 天，enabled: false（默认关闭，按需开启）。
+// 入口 applyTemporalDecayToHybridResults 还带时间戳缓存，
+// 以及"常青（evergreen）记忆跳过衰减"路径</code></pre>
+<div class="ok">一条 30 天前的记忆分数 ×0.5，90 天前 ×0.125——"新事实自然压过旧事实"就是这一个 exp。默认关闭透露作者的谨慎：衰减会误伤"长期有效的偏好"，所以留给配置决定。</div>
+<div class="pagenum">31 / 100</div></section>
+<section class="page " id="p32"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.1 存储：检索的两个工程细节</h1>
+<h2>细节一：检索放子进程（manager-search-knn.ts）</h2>
+<p>向量 KNN 检索可能耗时，OpenClaw 把它放进<b>子进程</b>执行——主线程（agent 循环）
+绝不被检索卡住。这是所有"agent 内嵌检索"都要面对的问题：
+检索是 IO/CPU 密集的，agent 循环是延迟敏感的，必须隔离。</p>
+<h2>细节二：检索必须有 deadline（search-deadline.ts）</h2>
+<table><tr><th>文件</th><th>职责</th></tr><tr><td>search-deadline.ts</td><td>给检索设超时，超时返回已有结果</td></tr><tr><td>source-filter.ts</td><td>按来源过滤（个人记忆/团队记忆/会话记忆）</td></tr><tr><td>project-ranking.ts</td><td>同项目记忆加权排序</td></tr></table>
+<div class="warn">为什么超时这么重要：检索是为对话服务的，宁可少召回也不能让用户等。
+"超时降级返回部分结果"应该是一切检索组件的标配，本报告配套代码里的
+<code>recall()</code> 没做超时（数据太小不需要），但真实系统必须做。</div>
+<h2>存储层小结</h2>
+<div class="flow"><span class="box">文本条目</span><span class="arr">→</span><span class="box">+ 嵌入向量</span><span class="arr">→</span><span class="box">+ FTS 索引</span><span class="arr">→</span><span class="box">+ 时间/重要性元数据</span><span class="arr">→</span><span class="box">= 可打分、可衰减、可过滤的记忆库</span></div>
+<div class="pagenum">32 / 100</div></section>
+<section class="page " id="p33"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.2 写入：session-memory hook 自动捕获</h1>
+<h2>与 Claude Code 相反的写入哲学</h2>
+<p>Claude Code 让模型"主动决定写什么"；OpenClaw 的 session-memory hook 则是
+<b>先捕获再说</b>：对话流经 hook 时自动截取内容落盘，不依赖模型的自觉。</p>
+<h2>capture.ts：捕获什么</h2>
+<p><span class="src">src/hooks/bundled/session-memory/capture.ts · captureRecentSessionMemoryEvents</span></p>
+<ul>
+<li>捕获最近的会话事件（用户消息、关键工具调用、结论）；</li>
+<li><b>限额保护</b>：8MB / 4096 条消息——超过就丢弃最旧的，防止无限膨胀；</li>
+<li><code>transcript.ts</code> 把原始事件流投影（projection）成可检索的结构。</li>
+</ol></ul>
+<h2>handler.ts：怎么落盘</h2>
+<pre><code>saveSessionMemoryNow()        // 立即落盘
+pendingSessionMemoryWrites()  // 异步批量写入
+// 设计：捕获在内存中积累，异步批量刷盘 —— 不拖慢对话主循环</code></pre>
+<h2>两种写入哲学的对照</h2>
+<table><tr><th>维度</th><th>模型主动写 (Claude Code)</th><th>hook 自动捕获 (OpenClaw)</th></tr><tr><td>写入质量</td><td>高（经过理解和措辞）</td><td>低（原始对话片段）</td></tr><tr><td>漏记风险</td><td>有（模型可能忘）</td><td>几乎没有</td></tr><tr><td>后续成本</td><td>低</td><td>高（需要策展/清洗）</td></tr></table>
+<div class="ok">OpenClaw 用"捕获便宜 + 后处理"换"不漏记"，用 importance/temporal-decay
+和检索打分来消化捕获进来的低质量原料——整套设计是自洽的。</div>
+<h2>真实源码（带注释）：8MB / 4096 条的捕获围栏</h2>
+<p class="src">openclaw/src/hooks/bundled/session-memory/capture.ts:17-74（节选，注释为讲解）</p>
+<pre><code>const SESSION_MEMORY_CAPTURE_MAX_BYTES = 8 * 1024 * 1024   // 8MB 总预算
+const SESSION_MEMORY_CAPTURE_PAGE_MESSAGES = 256           // 每页 256 条
+const SESSION_MEMORY_CAPTURE_MAX_SCANNED_MESSAGES = 4_096  // 最多扫 4096 条
+
+function captureRecentSessionMemoryEvents(scope, messageCount) {
+  const captured = []; let capturedBytes = 0; let offset = 0
+  let totalMessages = Infinity
+  while (
+    offset &lt; totalMessages &amp;&amp;
+    offset &lt; SESSION_MEMORY_CAPTURE_MAX_SCANNED_MESSAGES &amp;&amp;  // 三重围栏：
+    capturedBytes &lt; SESSION_MEMORY_CAPTURE_MAX_BYTES &amp;&amp;      // 扫描条数、
+    countSessionMemoryMessages(...) &lt; messageCount           // 字节量、目标数
+  ) {
+    // 从尾部按页往回读（bounded tail page），页大小受剩余预算约束
+    const page = readSessionTranscriptBoundedMessageTailPage(scope, {
+      maxBytes: SESSION_MEMORY_CAPTURE_MAX_BYTES - capturedBytes,
+      maxMessages: Math.min(256, 4096 - offset),
+      offset,
+    })
+    if (page.scannedMessages === 0) break
+    captured.unshift(...page.events.map(({ event }) =&gt; event)) // 头插=时间正序
+    capturedBytes += page.serializedBytes
+    offset += page.scannedMessages
+  }
+  return relinkCapturedActiveMessageEvents(captured)
+}</code></pre>
+<div class="note">捕获不是"全量读日志"：从最新一页往回翻，翻页随时可能被三个上限任一掐停。教学版 capture() 的"关键词命中才存"是第一道闸，这里是第二道闸——就算全都要，也最多 8MB / 4096 条。</div>
+<div class="pagenum">33 / 100</div></section>
+<section class="page " id="p34"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.2 写入：捕获内容的清洗</h1>
+<h2>不是什么都该进记忆库</h2>
+<p><span class="src">extensions/memory-lancedb/memory-capture-sanitization.ts</span></p>
+<p>自动捕获的代价是会捞进大量噪音（寒暄、临时调试、中间态）。sanitization 层负责清洗：
+过滤无信息量内容、脱敏敏感数据、丢弃被后续事件取代的中间态。</p>
+<h2>side-effecting-tools：只记"改变世界"的工具</h2>
+<p>memory-lancedb 的测试文件 <code>side-effecting-tools.test.ts</code> 揭示了一条精细规则：
+<b>只有有副作用的工具调用才值得记</b>。</p>
+<table><tr><th>工具类型</th><th>例子</th><th>是否捕获</th></tr><tr><td>只读工具</td><td>读文件、搜索、看图</td><td>否（结果随时可重取）</td></tr><tr><td>副作用工具</td><td>写文件、执行代码、发请求</td><td>是（行为产生了不可逆结果）</td></tr></table>
+<h2>memory-wiki：另一种组织形态</h2>
+<p><span class="src">extensions/memory-wiki/</span></p>
+<p>OpenClaw 还提供把记忆组织成 wiki 的插件——按主题分页、互相链接。
+对比三种组织形态：</p>
+<div class="flow"><span class="box">平铺条目(SQLite 行)</span><span class="arr">→</span><span class="box">按主题分页(wiki)</span><span class="arr">→</span><span class="box">单文件浓缩(MEMORY.md)</span></div>
+<div class="note">形态选择取决于"记忆主要被谁消费"：机器检索→平铺条目；
+模型系统性回顾→wiki；模型快速参考→单文件浓缩。三者可并存（OpenClaw 就并存了三种）。</div>
+<div class="pagenum">34 / 100</div></section>
+<section class="page " id="p35"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.2 写入：配套 Python 还原</h1>
+<h2>capture() 教学版</h2>
+<p><span class="src">agent_memory_lab_v2.py · OpenclawMemory.capture()</span></p>
+<pre><code>def capture(self, role, content):
+    """session-memory hook：每轮对话后自动捕获值得记的内容"""
+    if role == "user" and any(k in content for k in ("记住", "偏好", "公司", "我们")):
+        self.rows.append({"text": content, "vec": self._vec(content)})
+        json.dump(self.rows, open(self.path, "w", encoding="utf-8"), ...)</code></pre>
+<h2>教学版与真实版的差距（也是学习要点）</h2>
+<table><tr><th>环节</th><th>真实版</th><th>教学版</th><th>差距说明</th></tr><tr><td>触发</td><td>hook 挂在会话事件流上</td><td>手动调用 capture()</td><td>真实版无侵入</td></tr><tr><td>筛选</td><td>side-effecting 规则 + sanitization</td><td>关键词命中才存</td><td>真实版更智能</td></tr><tr><td>落盘</td><td>异步批量 + 8MB/4096 条限额</td><td>同步立即写 JSON</td><td>真实版不拖慢对话</td></tr><tr><td>嵌入</td><td>embedding 模型输出真向量</td><td>md5 hash 假向量</td><td>教学版向量只可演示不可用</td></tr></table>
+<div class="warn">关于假向量的诚实说明：教学版把文本 hash 成 8 维向量，
+余弦相似度没有语义意义（p43 会看到它给出的"分数"其实靠不住），
+真实系统必须用真正的嵌入模型。教学版保留它是为了让"向量分"这个槽位存在，
+跑通混合打分的骨架。</div>
+<div class="pagenum">35 / 100</div></section>
+<section class="page " id="p36"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.3 读取：active-memory 总体架构</h1>
+<h2>读取侧的主角：active-memory 插件</h2>
+<p><span class="src">extensions/active-memory/</span></p>
+<div class="flow"><span class="box">transcript-watch 监听对话</span><span class="arr">→</span><span class="box">trigger-recall 判断时机</span><span class="arr">→</span><span class="box">recall 发起检索</span><span class="arr">→</span><span class="box">召回代理裁决</span><span class="arr">→</span><span class="box">双通道注入</span></div>
+<table><tr><th>文件</th><th>职责</th></tr><tr><td>transcript-watch.ts</td><td>监听会话内容变化，产生「可能需要回忆」的信号</td></tr><tr><td>trigger-recall.ts</td><td>决定触发召回的时机（话题切换？新任务？）</td></tr><tr><td>recall.ts</td><td>执行检索流程</td></tr><tr><td>prompt.ts</td><td>召回代理的 prompt（含多种检索风格）</td></tr><tr><td>index.ts</td><td>注入执行：把结果拼进上下文</td></tr></table>
+<h2>与 Claude Code 的两个根本差异</h2>
+<ol>
+<li><b>判断者不同</b>：Claude Code 的挑选是"检索时"一次性完成；
+OpenClaw 的召回代理是独立的"决策角色"，可以拒绝注入（返回 NONE）；</li>
+<li><b>注入位置</b>：OpenClaw 带专属标头 <code>ACTIVE_MEMORY_CONTEXT</code>，
+让模型清楚知道"下面这段是回忆起来的内容"，并支持双通道
+（触发匹配的条目 + 检索条目分开标注，源码注释形如 "lane-1 injected N trigger-matched entries"）。</li>
+</ol>
+<div class="pagenum">36 / 100</div></section>
+<section class="page " id="p37"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.3 读取：召回代理的 prompt 设计</h1>
+<h2>prompt.ts：检索风格可配置</h2>
+<p><span class="src">extensions/active-memory/prompt.ts:21-80</span></p>
+<p>召回代理支持多种 prompt style，每种对应不同的召回倾向：</p>
+<table><tr><th>风格</th><th>倾向</th><th>适合场景</th></tr><tr><td>strict</td><td>只注入强相关，宁缺毋滥</td><td>成本敏感的日常对话</td></tr><tr><td>contextual</td><td>平衡相关性与覆盖</td><td>默认</td></tr><tr><td>recall-heavy</td><td>宁可多带，防漏</td><td>复杂长任务</td></tr><tr><td>precision-heavy</td><td>高精确度优先</td><td>事实问答</td></tr><tr><td>preference-only</td><td>只带用户偏好类记忆</td><td>写作/陪伴类任务</td></tr></table>
+<h2>为什么"风格"是个好抽象</h2>
+<div class="ok">把"该多激进地召回"做成可配置参数，而不是写死在代码里——
+不同任务对记忆的需求天然不同。这是值得抄走的架构决策。</div>
+<h2>无关时的契约：返回 NONE</h2>
+<p>召回代理的输出协议里明确有 <code>NONE</code> 这一档。配套代码还原：</p>
+<pre><code>def recall_agent(self, query):
+    hits = self.hybrid_search(query)
+    if not hits:
+        return None, "NONE"
+    combined, text, fts, vec = hits[0]
+    if fts <= 0.0 or combined < 0.2:
+        return None, "NONE"          # 相关性门控：不过线就不注入
+    return hits, "INJECT"
+</code></pre>
+<h2>真实源码（带注释）：五种风格的指令行与 NONE 契约</h2>
+<p class="src">openclaw/extensions/active-memory/prompt.ts:18-64 · :66-99（节选，原文为英文，注释为讲解）</p>
+<pre><code>function buildPromptStyleLines(style: ActiveMemoryPromptStyle): string[] {
+  switch (style) {
+    case "strict":
+      return [
+        "Treat the latest user message as the only primary query.",
+        // ↑ 只认最新一条用户消息，不许拿整段对话当检索理由
+        "If the latest user message does not strongly call for memory, reply with NONE.",
+        "If the connection is weak, indirect, or speculative, reply with NONE.",
+        // ↑ 两处显式 NONE：弱关联必须拒绝，宁缺毋滥
+      ]
+    case "recall-heavy":
+      return [
+        "... be willing to surface memory on softer plausible matches ...",
+        "If there is a credible recurring preference, habit, or user-context match,
+         lean toward returning memory instead of NONE.",
+        // ↑ 同一个契约的反向调法：软匹配也倾向注入——风格=偏置方向
+      ]
+    case "preference-only":
+      return [ "... Optimize for favorites, preferences, habits, routines..." ]
+    // contextual / precision-heavy 各有一组对称的指令行，此处从略
+  }
+}
+// 主体 prompt 里的输出协议（:96-99 附近）：
+//   "Return exactly one of these two forms:"
+//   "1. NONE"
+//   "2. one compact plain-text summary"        ← 只允许两种输出，二选一
+//   `... under ${params.config.maxSummaryChars} characters total.`
+//   "Write the summary as a memory note about the user, not as a reply to the user."
+//   ↑ 关键：让代理写"关于用户的记忆笔记"，而不是"对用户的回答"</code></pre>
+<div class="pagenum">37 / 100</div></section>
+<section class="page " id="p38"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.3 读取：混合检索打分</h1>
+<h2>hybrid.ts：两路分数加权</h2>
+<p>每条候选记忆得到两个分：</p>
+<ul>
+<li><b>FTS 分</b>：关键词重合（词面相关）；</li>
+<li><b>向量分</b>：嵌入余弦相似度（语义相关）。</li>
+</ul>
+<p>归一后加权融合。配套代码采用 0.6×FTS + 0.4×向量：</p>
+<pre><code>def hybrid_search(self, query, top_k=3):
+    qv = self._vec(query)
+    results = []
+    for r in self.rows:
+        fts = overlap_score(query, r["text"])
+        vec = self._cos(qv, r["vec"])
+        results.append((0.6 * fts + 0.4 * vec, r["text"], fts, vec))
+    results.sort(reverse=True)
+    return results[:top_k]</code></pre>
+<h2>再加一层：MMR 多样性重排（mmr.ts）</h2>
+<p>纯按分数排序容易召回 5 条几乎相同的记忆。MMR（Maximal Marginal Relevance）在
+"相关性"和"彼此不相似"之间平衡——第 2 条记忆不仅要在意"和查询多相关"，
+还要在意"和已选的第 1 条多不同"。</p>
+<h2>打分只是起点</h2>
+<div class="flow"><span class="box">hybrid 打分</span><span class="arr">→</span><span class="box">temporal-decay 时间衰减</span><span class="arr">→</span><span class="box">importance 重要性</span><span class="arr">→</span><span class="box">project-ranking 项目加权</span><span class="arr">→</span><span class="box">MMR 去冗余</span><span class="arr">→</span><span class="box">top-k 截断</span></div>
+<p class="src">这就是数据化记忆库的优势：每一环都是一个可以独立调整的打分器。</p>
+<h2>真实源码（带注释）：加权融合核心</h2>
+<p class="src">openclaw/extensions/memory-core/src/memory/hybrid.ts:196-249（节选，注释为讲解）</p>
+<pre><code>const merged = Array.from(byId.values()).map((entry) =&gt; {
+  // 关键词分：正文命中用 BM25 分；仅路径部分命中时退用路径分
+  const keywordScore =
+    entry.textScore &gt; 0 ? entry.rankingScore
+      : entry.exactPathSpecificity &gt; 0 ? 0
+      : entry.pathScore
+  // 媒体文件（图片等）没有文本正文：只用纯向量分，
+  // 避免拿文本权重去乘一个不存在的词面分
+  const dropMediaTextSignal =
+    entry.hasVector && !entry.hasKeyword &&
+    params.vectorWeight &gt; 0 &&
+    params.isNonTextMediaPath?.(entry.path) === true
+  const contentScore = dropMediaTextSignal
+    ? entry.vectorScore
+    : params.vectorWeight * entry.vectorScore +
+      params.textWeight * keywordScore        // ← 加权融合就在这一行
+  // 时间衰减开启时，"精确路径命中"层内部再分两半：
+  // 让"更近"的记录能赢过"更旧但词面命中"的
+  const weightedScore =
+    entry.exactPathSpecificity &gt; 0
+      ? temporalDecayConfig.enabled
+        ? scoreExactPathTieForTemporalDecay(contentScore)
+        : hasWeightedContentRelevance ? contentScore : 1
+      : contentScore
+  return { path: entry.path, score: weightedScore,
+           vectorScore: entry.vectorScore, textScore: entry.textScore,
+           importance: entry.importance, ... }  // 各路分数透传，调试可归因
+})</code></pre>
+<div class="pagenum">38 / 100</div></section>
+<section class="page " id="p39"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.3 读取：门控阈值的第一手教训</h1>
+<h2>一个真实的调试故事（来自配套代码开发过程）</h2>
+<p>教学版最初把门控设为"混合分 &gt; 0.15 就注入"。结果无关任务
+（"帮我写一首诗"）也通过了——因为 hash 假向量的余弦值天然在 0.5~0.8 之间游走，
+单看混合分毫无判别力。</p>
+<pre><code>修复前: 无关任务 混合分 0.26 → 注入了无关记忆（错！）
+修复后: 要求 FTS 分 > 0（确实聊到同一件事）且混合分 > 0.2</code></pre>
+<h2>教训抽象成三条</h2>
+<ol>
+<li><b>低质量信号不能单独做判据</b>——假向量/弱模型给的分数只能加权辅助，不能一票通过；</li>
+<li><b>门控要用"最强证据"做底线</b>——FTS 词面重合是强证据（聊到了同一个词），
+向量分只是弱证据（整体相似）；</li>
+<li><b>每个阈值都要用正反例测</b>——准备几组"应该注入/不应该注入"的任务做回归测试。</li>
+</ol>
+<div class="warn">生产级系统里，门控判断交给小模型而不是阈值——小模型能理解
+"分析延迟对照基线"和"P99 阈值 320 ms"是相关的（哪怕没有词面重合）。
+阈值门控是它的廉价替代，适合同义词少的场景。</div>
+<div class="pagenum">39 / 100</div></section>
+<section class="page " id="p40"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.3 读取：配套 Python 还原</h1>
+<h2>完整读取链（教学版）</h2>
+<pre><code>def build_system_prompt(self, query):
+    base = "你是 OpenClaw 助手。\n"
+    hits, verdict = self.recall_agent(query)
+    if verdict == "NONE":
+        return base + "(active-memory: 本次无相关记忆，不注入)"
+    p = base + "## ACTIVE_MEMORY_CONTEXT（召回的记忆）\n"
+    for score, text, fts, vec in hits:
+        p += f"- {text}  (混合分 {score:.2f} = FTS {fts:.2f} + 向量 {vec:.2f})\n"
+    return p</code></pre>
+<h2>真实版 vs 教学版逐环节对照</h2>
+<table><tr><th>环节</th><th>真实版</th><th>教学版</th></tr><tr><td>触发</td><td>transcript-watch + trigger-recall 自动</td><td>每次手动调用</td></tr><tr><td>检索</td><td>SQLite KNN 子进程 + FTS + deadline</td><td>进程内全表扫描</td></tr><tr><td>裁决</td><td>小模型召回代理（5 种风格）</td><td>阈值门控</td></tr><tr><td>排序</td><td>hybrid + decay + importance + MMR</td><td>hybrid 单层加权</td></tr><tr><td>注入</td><td>双通道 + ACTIVE_MEMORY_CONTEXT 标头</td><td>单通道 + 标头</td></tr></table>
+<p class="src">骨架一致，每一环的真实版都多出"工程可靠性"维度（超时、子进程、降级）。</p>
+<div class="pagenum">40 / 100</div></section>
+<section class="page " id="p41"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.4 压缩：shouldCompact 与切点</h1>
+<h2>压缩主文件</h2>
+<p><span class="src">packages/agent-core/src/harness/compaction/compaction.ts</span></p>
+<h2>shouldCompact():299</h2>
+<p>集中式判断：上下文 token 逼近有效窗口时返回 true。与 Claude Code 的区别：
+Claude Code 有四级分散触发，OpenClaw 收敛为一个入口函数，压缩策略内聚。</p>
+<h2>findCutPoint():454</h2>
+<p>找安全切点——不能在工具调用与工具结果之间切开（那会让对话结构损坏），
+不能切在未完成的话题中间。切点选择要考虑：消息配对完整性、话题边界、
+最近关键决策的位置。</p>
+<h2>摘要生成</h2>
+<p><code>SUMMARIZATION_SYSTEM_PROMPT</code>（:526）驱动模型生成结构化摘要，
+<code>capCompactionSummary()</code>（:121）限制摘要本身不超过
+<code>MAX_COMPACTION_SUMMARY_CHARS = 16000</code> 字符——
+<b>摘要也会失控，摘要也要设上限</b>，这是很容易漏掉的防御点。</p>
+<table><tr><th>防御点</th><th>函数</th><th>常量/行为</th></tr><tr><td>触发判断</td><td>shouldCompact()</td><td>token 阈值</td></tr><tr><td>安全切分</td><td>findCutPoint()</td><td>保消息配对完整</td></tr><tr><td>摘要上限</td><td>capCompactionSummary()</td><td>16,000 字符</td></tr></table>
+<h2>真实源码（带注释）：触发、切点、摘要上限</h2>
+<p class="src">openclaw/packages/agent-core/src/harness/compaction/compaction.ts（节选，注释为讲解）</p>
+<pre><code>// :298-308 触发判断——集中式，五行讲完
+export function shouldCompact(contextTokens, contextWindow, settings): boolean {
+  if (!settings.enabled || !Number.isFinite(contextWindow) || contextWindow &lt;= 0)
+    return false
+  // 已用 token 超过"窗口 - 预留输出"即触发，与 Claude Code 同思路
+  return contextTokens &gt; contextWindow - settings.reserveTokens
+}
+
+// :119-124 摘要上限：摘要会随历史在后续每个请求里重放，
+// 所以必须有一个与 provider 无关的 16K 硬上限（源码注释原意）
+export const MAX_COMPACTION_SUMMARY_CHARS = 16_000
+export const SUMMARY_TRUNCATED_MARKER =
+  "\n\n[Compaction summary truncated to fit budget]"
+
+// :453-524 切点选择（节选）：只在"合法切点"集合里挑
+export function findCutPoint(entries, startIndex, endIndex, keepRecentTokens) {
+  const cutPoints = findValidCutPoints(entries, startIndex, endIndex)
+  // 从尾部向前累加 token，凑满 keepRecentTokens 预算就停——
+  // 保证最近的内容原样保留，切点落在合法边界上
+  for (let i = endIndex - 1; i &gt;= startIndex; i--) {
+    ...
+    if (accumulatedTokens &gt;= keepRecentTokens) { cutIndex = ...; break }
+  }
+  // 再向前回退：跳过元数据条目，直到真正的消息边界——
+  // 私有持久化消息不能成为切的边界（防止切在工具调用/结果对中间）
+  while (cutIndex &gt; startIndex) {
+    ...
+    if (prevEntry.type === "message" || getMessageFromEntryForCompaction(prevEntry))
+      break
+    cutIndex--
+  }
+  return { firstKeptEntryIndex: cutIndex, turnStartIndex, isSplitTurn }
+}</code></pre>
+<div class="pagenum">41 / 100</div></section>
+<section class="page " id="p42"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.4 压缩：分支摘要与会话恢复</h1>
+<h2>branch-summarization.ts</h2>
+<p>OpenClaw 支持会话分支（从某个节点分叉探索），每个分支可独立摘要——
+主分支的摘要不携带分叉实验的细节，分叉的摘要保留自己的脉络。
+这对应真实工作流：agent 经常"试一条路，不行，退回来试另一条"，
+分支摘要让每条路的上下文都保持干净。</p>
+<h2>main-session-recovery：恢复时的记忆</h2>
+<p><span class="src">src/agents/main-session-recovery/</span></p>
+<p>会话崩溃/重启后恢复上下文：最近摘要 + 游标之后的消息 + 关键状态。
+恢复是压缩的"对偶问题"——压缩决定"忘什么"，恢复决定"怎么想起来"。</p>
+<h2>压缩体系小结</h2>
+<div class="flow"><span class="box">shouldCompact 触发</span><span class="arr">→</span><span class="box">findCutPoint 切分</span><span class="arr">→</span><span class="box">结构化摘要(≤16k)</span><span class="arr">→</span><span class="box">分支独立摘要</span><span class="arr">→</span><span class="box">崩溃恢复</span></div>
+<div class="note">与 Claude Code 对比：两家都把"结构化摘要"当核心，
+差别在组织方式——Claude Code 分级防线上压，OpenClaw 单入口 + 分支化管理。
+没有优劣，取决于会话形态：线性任务适合前者，探索式任务适合后者。</div>
+<h2>真实源码（带注释）：结构化摘要模板全文</h2>
+<p class="src">openclaw/packages/agent-core/src/harness/compaction/compaction.ts:530-561（原文，注释为讲解）</p>
+<pre><code>const SUMMARIZATION_PROMPT = `The messages above are a conversation to
+summarize. Create a structured context checkpoint summary that another LLM
+will use to continue the work.
+
+Use this EXACT format:          // ← 强制格式；摘要是给"下一个模型"的交接文档
+
+## Goal
+[What is the user trying to accomplish? ...]
+
+## Constraints &amp; Preferences     // ← 约束与偏好单列：压缩最不能丢的就是这类信息
+- [Any constraints, preferences, or requirements mentioned by user]
+- [Or "(none)" if none were mentioned]
+
+## Progress
+### Done
+- [x] [Completed tasks/changes]
+### In Progress
+- [ ] [Current work]
+### Blocked
+- [Issues preventing progress, if any]
+
+## Key Decisions
+- **[Decision]**: [Brief rationale]      // ← 决定必须带理由，防止后续翻烧饼
+
+## Next Steps
+1. [Ordered list of what should happen next]
+
+## Critical Context
+- [Any data, examples, or references needed to continue]
+
+Keep each section concise. Preserve exact file paths, function names,
+and error messages.`   // ← 路径/函数名/报错原文一字不能改——摘要里改写它们=埋雷
+
+// 另有 UPDATE_SUMMARIZATION_PROMPT(:563)：已有旧摘要时改用增量更新模板
+//（保留旧信息、追加新进展），选用逻辑在 :710 —— 这正是"摘要套摘要"的正面解法</code></pre>
+<div class="pagenum">42 / 100</div></section>
+<section class="page " id="p43"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.5 Prompt 实例：注入与不注入（真实输出）</h1>
+<h2>相关任务：注入（真实运行输出）</h2>
+<p>任务 = "分析接口延迟需要对照基线 ms"</p>
+<pre><code>你是 OpenClaw 助手。
+## ACTIVE_MEMORY_CONTEXT（召回的记忆）
+- 我们订单接口的 P99 延迟基线是 320 ms，记住  (混合分 0.54 = FTS 0.32 + 向量 0.89)</code></pre>
+<h2>无关任务：拒绝注入（真实运行输出）</h2>
+<p>任务 = "帮我写一首诗"</p>
+<pre><code>你是 OpenClaw 助手。
+(active-memory: 本次无相关记忆，不注入)</code></pre>
+<h2>两种输出的价值</h2>
+<ul>
+<li>注入路径：记忆带着<b>完整的打分依据</b>出现（FTS 0.32 + 向量 0.89），
+调试时你能立刻看出"这次召回主要靠哪路信号"；</li>
+<li>拒绝路径：prompt 里明示"无相关记忆"——模型知道没有外部记忆可用，
+不会臆造"根据之前的记录……"。</li>
+</ul>
+<div class="ok">对比 Claude Code（p25）：Claude 的记忆是"安静的背景"
+（MEMORY.md 无标注地混入 prompt），OpenClaw 的记忆是"有标签的引用"
+（带标头带分数）。前者省 token，后者可调试——值得根据场景选择。</div>
+<div class="pagenum">43 / 100</div></section>
+<section class="page " id="p44"><div class="part-tag">第 2 章 · OpenClaw：数据库记忆与召回代理</div><h1>2.6 小结：OpenClaw 的设计取舍</h1>
+<h2>它选择了什么、放弃了什么</h2>
+<table><tr><th>选择</th><th>放弃</th><th>理由</th></tr><tr><td>SQLite/向量库存储</td><td>文件透明性</td><td>可打分、可衰减、可扩展到大规模</td></tr><tr><td>hook 自动捕获</td><td>写入质量</td><td>绝不漏记，用检索和策展消化噪音</td></tr><tr><td>召回代理门控</td><td>简单性</td><td>无关不注入，保护注意力</td></tr><tr><td>检索工程化(子进程/超时/MMR)</td><td>实现简单</td><td>agent 循环绝不被检索拖垮</td></tr></table>
+<h2>与 Claude Code 一图对比</h2>
+<div class="flow"><span class="box">CC: 文件→全量+小模型挑选</span><span class="arr">→</span><span class="box">vs</span><span class="arr">→</span><span class="box">OC: 数据库→打分+代理门控</span></div>
+<h2>可以直接抄走的三条经验</h2>
+<ol>
+<li><b>检索打分要多信号融合</b>：词面 + 语义 + 时间 + 重要性，每路一个独立可调的打分器；</li>
+<li><b>门控必须存在且要用强证据</b>：FTS/实体重合是强证据，弱信号只能辅助；</li>
+<li><b>摘要也要设上限</b>（16k 字符），压缩链条上每一环都要防失控。</li>
+</ol>
+<h2>动手题</h2>
+<p>把教学版 <code>hybrid_search</code> 的权重从 0.6/0.4 改成 0.3/0.7，
+再用 p39 的正反例测试——你会看到门控行为变化，体会权重调优的手感。</p>
+<div class="pagenum">44 / 100</div></section>
+<section class="page " id="p45"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>第 3 章导读：Hermes 的记忆世界观</h1>
+<h2>分析对象</h2>
+<p>仓库 <span class="src">D:/memory/hermes-agent</span>（Python）。</p>
+<h2>它的记忆世界观：记忆是一条流水线</h2>
+<p>Hermes 是五家里唯一把记忆当"完整流水线"来建设的：
+<b>写入（带门槛）→ 自动提取（后台评审）→ 策展（定期修剪）→ 注入（双文件全量）
+→ 压缩（四级 Python 实现）</b>，每个环节都有独立模块负责。
+它也是 Python 写的，对 Python 使用者最友好——源码可以直接逐行读。</p>
+<h2>本章地图（16 页）</h2>
+<table><tr><th>小节</th><th>页码范围</th><th>内容</th></tr><tr><td>3.1 存储层</td><td>p46-48</td><td>MemoryStore：MEMORY.md/USER.md + 外部 provider</td></tr><tr><td>3.2 写入层</td><td>p49-52</td><td>工具写入 + 写门槛 + 后台评审 + 策展</td></tr><tr><td>3.3 读取层</td><td>p53-54</td><td>format_for_system_prompt + 预取</td></tr><tr><td>3.4 压缩层</td><td>p55-57</td><td>trajectory/context/native 三级 + 提交围栏</td></tr><tr><td>3.5 Prompt 实例</td><td>p58</td><td>双文件注入的真实输出</td></tr><tr><td>3.6 小结</td><td>p59-60</td><td>取舍 + Python 对照</td></tr></table>
+<div class="pagenum">45 / 100</div></section>
+<section class="page " id="p46"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.1 存储：MemoryStore 双文件</h1>
+<h2>两个文件，两种记忆</h2>
+<p><span class="src">tools/memory_tool.py:159 · class MemoryStore</span></p>
+<table><tr><th>文件</th><th>内容类型</th><th>字符上限(真实)</th><th>教学版</th></tr><tr><td>MEMORY.md</td><td>项目记忆：约定、参数、决定</td><td>2,200</td><td>400</td></tr><tr><td>USER.md</td><td>用户画像：偏好、背景、习惯</td><td>1,375</td><td>250</td></tr></table>
+<p>双文件分离的原因：<b>项目记忆随项目走，用户画像随人走</b>。
+换项目时前者重置、后者保留；多人共用 agent 时，USER.md 按人隔离。</p>
+<h2>可靠性三件套</h2>
+<pre><code>_file_lock(:304)            # 文件锁：防止并发写坏文件
+_detect_external_drift(:839) # 外部篡改检测：用户手改了文件也能兼容
+.bak 备份                    # 每次写入前备份旧版</code></pre>
+<h2>为什么一个 markdown 文件需要这么多防御</h2>
+<div class="warn">因为 MEMORY.md 的<b>写入者有三个</b>：模型（工具调用）、用户（手改文件）、
+代码（程序化更新）。任何时刻都可能有并发写、外部覆盖、半途崩溃。
+记忆文件越"有用"，越接近生产数据库的地位，就越需要数据库级的防御。
+这是"文件记忆"路线的真实成本。</div>
+<h2>真实源码（带注释）：MemoryStore 与"冻结快照"</h2>
+<p class="src">hermes-agent/tools/memory_tool.py:159-198（节选，注释为讲解）</p>
+<pre><code>class MemoryStore:
+    """
+    Bounded curated memory with file persistence. One instance per AIAgent.
+
+    Maintains two parallel states:
+      - _system_prompt_snapshot: frozen at load time, used for system prompt
+        injection. Never mutated mid-session. Keeps prefix cache stable.
+        ↑ 冻结快照：注入 prompt 的内容在 load_from_disk() 时定死，
+          会话中途写入不影响它——保住 API 的前缀缓存
+      - memory_entries / user_entries: live state, mutated by tool calls.
+        Tool responses always reflect this live state.
+        ↑ 活状态：工具调用读写的都是它，工具返回值永远反映最新事实
+    """
+    # 一个回合内 consolidate 连续失败超过 3 次（溢出/零匹配），
+    # 就返回终态 "save skipped"，防止脆弱的 replace/add 把回合
+    # 循环到预算耗尽、吞掉用户的回复（issue #42405）
+    _MAX_CONSOLIDATION_FAILURES_PER_TURN = 3
+
+    def __init__(self, memory_char_limit: int = 2200,   # MEMORY.md 上限
+                 user_char_limit: int = 1375,           # USER.md 上限
+                 *, memory_enabled: bool = True,
+                 user_profile_enabled: bool = True): ...</code></pre>
+<div class="note">"冻结快照 + 活状态"是文件记忆的精妙折中：注入稳定（缓存友好）与写入即时（工具可感知）各拿各的。本页前文讲的三重防御（文件锁/篡改检测/备份）保护的是磁盘上的活状态。</div>
+<div class="pagenum">46 / 100</div></section>
+<section class="page " id="p47"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.1 存储：外部记忆 provider 生态</h1>
+<h2>可插拔的记忆后端</h2>
+<p><span class="src">agent/memory_provider.py:110 · class MemoryProvider</span></p>
+<p>Hermes 定义了 provider 抽象基类，插件目录 <code>plugins/memory/</code> 下有多个实现：</p>
+<ul>
+<li><b>mem0</b>：流行的开源记忆层服务；</li>
+<li><b>supermemory / retaindb / hindsight</b>：云记忆服务；</li>
+<li><b>honcho</b>：用户建模向的记忆服务；</li>
+<li><b>holographic / byterover / openviking</b>：社区实现。</li>
+</ul>
+<h2>统一抽象的价值</h2>
+<p>内建文件记忆和外部 provider 走同一个接口，对上层（prompt 组装、注入）透明：
+<code>MemoryManager.build_system_prompt()</code>（:525）不关心记忆存在哪里。</p>
+<div class="flow"><span class="box">内建 MemoryStore(文件)</span><span class="arr">→</span><span class="box">+</span><span class="arr">→</span><span class="box">外部 provider(云/向量)</span><span class="arr">→</span><span class="box">→ 统一 MemoryManager</span><span class="arr">→</span><span class="box">→ 注入 prompt</span></div>
+<table><tr><th>维度</th><th>内建文件</th><th>外部 provider</th></tr><tr><td>依赖</td><td>零</td><td>网络 + 服务可用性</td></tr><tr><td>容量</td><td>千字符级</td><td>无上限</td></tr><tr><td>检索</td><td>无（全量注入）</td><td>服务端检索</td></tr><tr><td>隐私</td><td>完全本地</td><td>数据出境</td></tr></table>
+<div class="note">这个架构回答了一个常见问题："要不要用 mem0 这种记忆服务？"
+Hermes 的答案是：把两者都做成后端，<b>默认文件，需要规模时切换</b>。</div>
+<div class="pagenum">47 / 100</div></section>
+<section class="page " id="p48"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.1 存储：会话状态与记忆的边界</h1>
+<h2>会话 ≠ 记忆：SQLite 管会话</h2>
+<p><span class="src">hermes_state.py:392 · _default_db_path()，WAL 模式</span></p>
+<p>Hermes 用 SQLite 存<b>会话历史</b>（哪次对话、哪些消息、游标位置），配套模块：</p>
+<table><tr><th>文件</th><th>职责</th></tr><tr><td>hermes_state_schema.py</td><td>会话库表结构</td></tr><tr><td>hermes_state_search.py</td><td>会话内容搜索（翻旧对话）</td></tr><tr><td>hermes_state_portability.py</td><td>会话导出/迁移</td></tr></table>
+<h2>边界划分的原则</h2>
+<table><tr><th>数据</th><th>归属</th><th>理由</th></tr><tr><td>对话原文（几万条）</td><td>SQLite 会话库</td><td>体积大、无检索注入需求、按时间组织</td></tr><tr><td>浓缩事实（几十条）</td><td>MEMORY.md 文件</td><td>需要全量注入、需要模型可读可改</td></tr><tr><td>用户偏好</td><td>USER.md 文件</td><td>跨项目、跨会话、常被手改</td></tr></table>
+<div class="ok">很多自研系统在这里犯迷糊：把对话原文当记忆存、把记忆塞进会话库。
+Hermes 的划分标准值得记住：<b>看数据的消费方式——要进 prompt 的进文件，
+要翻历史的进数据库</b>。</div>
+<div class="pagenum">48 / 100</div></section>
+<section class="page " id="p49"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.2 写入：memory 工具与写门槛</h1>
+<h2>通道一：模型主动调 memory 工具</h2>
+<p><span class="src">tools/memory_tool.py:1086 · memory_tool()</span></p>
+<p>工具暴露 add / replace / remove / apply_batch 操作（:414 / :473 / :544 / :586），
+模型可以单条写也可以批量写。</p>
+<h2>写门槛 _apply_write_gate(:949)</h2>
+<pre><code>def _write_gate(self, kind, text):
+    for e in self._entries(kind):
+        if text in e or e in text:    # 新条目与已有条目互相包含 → 拒写
+            return False
+    return True</code></pre>
+<p>门槛逻辑：新条目若是已有条目的子串/超串，视为重复，拒写并提示模型。
+这比"完全相同才去重"强——模型常把同一事实换个措辞重写一遍。</p>
+<h2>教学版运行证据</h2>
+<pre><code>[memory] OK: 记住：我们订单接口的 P99 延迟基线是 320 ms
+[user]   OK: 我喜欢用 markdown 表格
+[memory] SKIPPED_DUPLICATE: 记住：我们订单接口的 P99 延迟基线是 320 ms   ← 门槛拦下</code></pre>
+<div class="ok">写门槛是全链路中最便宜的防线：十几行代码，挡住重复记忆的无限繁殖。</div>
+<h2>真实源码（带注释）：写入门其实是"放行/拒绝/暂存"三态</h2>
+<p class="src">hermes-agent/tools/memory_tool.py:949-1002（_apply_write_gate，节选，注释为讲解）</p>
+<pre><code>def _apply_write_gate(action, target, content, old_text) -&gt; Optional[str]:
+    """Evaluate the memory write gate. Returns a JSON tool-result string when
+    the write should NOT proceed normally (blocked or staged), or None when
+    the caller should perform the real write."""
+    if action not in {"add", "replace", "remove"}:
+        return None                       # 只挡"会改动记忆"的动作
+    ...
+    # 交给统一的写审批模块评估，三种裁决：
+    decision = wa.evaluate_gate(wa.MEMORY, inline_summary=summary,
+                                inline_detail=detail)
+    if decision.allow:
+        return None                       # None = 放行，调用方执行真正的写入
+    if decision.blocked:
+        return tool_error(decision.message, success=False)   # 明确拒绝
+    # 第三态：staged（暂存待批）——写入不执行也不丢弃，
+    # 挂起一个 pending_id，等人（或更高权限）裁决
+    record = wa.stage_write(wa.MEMORY, payload,
+                            summary=f"{summary}: {detail[:120]}",
+                            origin=wa.current_origin())
+    return json.dumps({"success": True, "staged": True,
+                       "pending_id": record["id"], ...})</code></pre>
+<div class="warn">一个诚实的勘误：真实源码 :949 的 <code>_apply_write_gate</code> 是"放行/拒绝/暂存"的写<b>审批</b>门（对接 write_approval 模块，且模块加载失败时 fail-open）；上面教学版演示的"互相包含即拒写"去重，对应的是 MemoryStore 内部的合并/去重逻辑，外加 <code>_MAX_CONSOLIDATION_FAILURES_PER_TURN = 3</code> 的失败熔断（防止单回合反复重试写爆预算，issue #42405）。审批门 + 去重 + 熔断合起来，才是 Hermes 写入层的完整防线。</div>
+<h2>真实源码（带注释）：MemoryStore.add() 的四道检查</h2>
+<p class="src">hermes-agent/tools/memory_tool.py:414-471（节选，注释为讲解）</p>
+<pre><code>def add(self, target: str, content: str) -&gt; Dict[str, Any]:
+    content = content.strip()
+    if not content:
+        return {"success": False, "error": "Content cannot be empty."}
+    # 检查① 注入/渗出扫描：内容先过安全检查再落盘
+    scan_error = _scan_memory_content(content)
+    if scan_error: return {"success": False, "error": scan_error}
+
+    with self._file_lock(self._path_for(target)):   # 检查② 文件锁下重读磁盘
+        ...
+        # 检查③ 精确去重：同文条目已存在 → 幂等成功（不是报错）
+        if content in entries:
+            return self._success_response(target, "Entry already exists ...")
+        # 检查④ 容量预算：预计算加入后的总字符数
+        new_total = len(ENTRY_DELIMITER.join(entries + [content]))
+        if new_total &gt; limit:
+            # 超限不硬拒，返回"自助整理套餐"：当前全部条目 + 整理指令，
+            # 让模型用 replace/remove 腾地方后"本回合内重试"
+            return self._consolidation_failure({
+                "error": f"Memory at {current:,}/{limit:,} chars. ... "
+                         f"Consolidate now: use 'replace' to merge ... "
+                         f"then retry this add — all in this turn.",
+                "current_entries": entries, ...})
+        entries.append(content); self.save_to_disk(target)</code></pre>
+<div class="ok">教学版的 SKIPPED_DUPLICATE 只对应检查③。真实版的亮点是检查④：超限返回的不是错误而是"整理指引 + 当前条目清单"，把容量压力转化为模型的整理动作。配套的 <code>apply_batch</code>(:586) 允许一次调用"删两条+加一条"原子完成——按<b>最终</b>预算校验，中间态溢出不算数，省掉多回合"整理-重试"反复重发上下文。</div>
+<div class="pagenum">49 / 100</div></section>
+<section class="page " id="p50"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.2 写入：后台评审自动提取</h1>
+<h2>通道二：background_review.py——用户不用管，也忘不了</h2>
+<p><span class="src">agent/background_review.py</span></p>
+<p>这是 Hermes 最有特色的机制。它定期（或空闲时）<b>fork 一个评审 agent</b>，
+把最近的对话历史交给它，配一条专属 prompt：</p>
+<pre><code>_MEMORY_REVIEW_PROMPT(:465)
+"Review the conversation above and consider saving to memory…"
+// 评审 agent 分析对话 → 决定提取哪些事实 → 调用记忆工具写入</code></pre>
+<h2>为什么需要第二条写入通道</h2>
+<table><tr><th></th><th>通道一：模型主动写</th><th>通道二：后台评审</th></tr><tr><td>触发</td><td>对话进行中，模型自觉</td><td>定期/空闲，系统强制</td></tr><tr><td>覆盖</td><td>可能漏（模型忙于任务）</td><td>系统性回看，不漏</td></tr><tr><td>成本</td><td>0（搭主对话便车）</td><td>额外的小模型调用</td></tr><tr><td>质量</td><td>高（有完整上下文）</td><td>中（只有近期历史）</td></tr></table>
+<p>两条通道互补：主对话里的"记住！"立即生效；漏掉的由评审兜底。
+<code>build_memory_write_metadata</code>（:946）给评审写入的条目打来源标记，
+<code>is_background_review_enabled</code>（:291）+ 间隔配置控制开关与频率。</p>
+<div class="ok">这是一切"自动记忆"功能的正确形态：<b>主通道即时、评审通道兜底、来源可追溯</b>。</div>
+<h2>真实源码（带注释）：评审提示词全文</h2>
+<p class="src">hermes-agent/agent/background_review.py:465-475（原文 + 注释）</p>
+<pre><code>_MEMORY_REVIEW_PROMPT = (
+    "Review the conversation above and consider saving to memory if appropriate.\n\n"
+    "Focus on:\n"
+    # 只盯两个维度：① 用户暴露了什么"关于自己"的信息
+    "1. Has the user revealed things about themselves — their persona, desires, "
+    "preferences, or personal details worth remembering?\n"
+    # ② 用户对"你该怎么干活"表达了什么期望（工作方式 &gt; 一次性事实）
+    "2. Has the user expressed expectations about how you should behave, their work "
+    "style, or ways they want you to operate?\n\n"
+    # 出口只有一个动作：调 memory 工具；没有就明说，不许硬凑
+    "If something stands out, save it using the memory tool. "
+    "If nothing is worth saving, just say 'Nothing to save.' and stop."
+)</code></pre>
+<div class="ok">注意这个 prompt 的克制：只问两类问题（用户画像 + 工作方式），且给了体面的"不保存"出口。评审提取最常见的失败模式就是硬凑——把一次性细节也存进去，把记忆库变成垃圾场。</div>
+<div class="pagenum">50 / 100</div></section>
+<section class="page " id="p51"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.2 写入：curator 定期策展</h1>
+<h2>通道三：记忆库的园丁</h2>
+<p><span class="src">agent/curator.py</span></p>
+<ul>
+<li><code>should_run_now()</code>（:233）：策展时机（定期/触发条件）；</li>
+<li><code>apply_automatic_transitions()</code>（:305）：自动状态迁移——
+记忆条目在"活跃 → 归档 → 删除"之间流转。</li>
+</ul>
+<h2>策展做什么</h2>
+<table><tr><th>动作</th><th>含义</th><th>例子</th></tr><tr><td>归档</td><td>不再活跃但别删</td><td>过期的部署参数 → 归档区</td></tr><tr><td>整合</td><td>多条并一条</td><td>三次提到的报告格式偏好 → 合并成一条</td></tr><tr><td>修剪</td><td>删冗余/低价值</td><td>重复条目、无信息量内容</td></tr><tr><td>提升</td><td>低频但关键的上浮</td><td>灾难恢复步骤 → 入口区</td></tr></table>
+<h2>教学版策展</h2>
+<pre><code>def curator(self):
+    report = []
+    for kind in self.files:
+        entries = self._entries(kind)
+        if len(entries) > 5:
+            archived = entries[:1]
+            report.append(f"{kind}: 归档了 {archived}")
+    return report   # 超过 5 条就归档最旧的——最朴素的策展</code></pre>
+<div class="note">加上写入时的容量淘汰（超上限丢最旧），Hermes 的记忆库在三个时间尺度上保持卫生：
+<b>写入时（门槛）、存储时（容量淘汰）、周期性（策展）</b>。</div>
+<h2>真实源码（带注释）：策展对象其实是技能库</h2>
+<p class="src">hermes-agent/agent/curator.py:233-283 · :305-398（节选，注释为讲解）</p>
+<pre><code>def should_run_now(now=None) -&gt; bool:
+    """Gates: enabled / not paused / last_run_at older than interval_hours"""
+    ...
+    last = _parse_iso(state.get("last_run_at"))
+    if last is None:
+        # 首次观察不立即跑：把 last_run_at 播种为"现在"，
+        # 推迟一个完整间隔（默认 7 天）再真正执行——
+        # 防止刚装完就在后台动用户的东西
+        state["last_run_at"] = now.isoformat()
+        state["last_run_summary"] = "deferred first run — curator seeded, ..."
+        save_state(state); return False
+    return (now - last) &gt;= timedelta(hours=get_interval_hours())
+
+def apply_automatic_transitions(now=None):
+    """Walk every curator-managed SKILL and move active/stale/archived ..."""
+    stale_cutoff   = now - timedelta(days=get_stale_after_days())
+    archive_cutoff = now - timedelta(days=get_archive_after_days())
+    cron_referenced = _cron_referenced_skills()
+    for row in _u.curated_report():
+        if row.get("pinned"): continue          # 钉住的永不自动迁移
+        if row["name"] in cron_referenced: continue  # cron 要用的等同钉住
+        anchor = last_activity or created_at or now
+        # 从未用过的技能有宽限期：use=0 是"没有证据"，不是"过时证据"
+        never_used = int(row.get("use_count", 0) or 0) == 0
+        if never_used and anchor &gt; stale_cutoff: continue
+        if anchor &lt;= archive_cutoff:  _u.archive_skill(name)          # → 归档
+        elif anchor &lt;= stale_cutoff:  _u.set_state(name, STATE_STALE) # 活跃→陈旧
+        elif current == STATE_STALE:   _u.set_state(name, STATE_ACTIVE) # 又被用→复活</code></pre>
+<div class="warn"><b>勘误（对照源码）</b>：V1 把 curator.py 描述为"记忆条目的策展"。实际它管理的是<b>技能库（skills）</b>的生命周期：active → stale → archived 三态流转，pinned 与被 cron 引用的技能豁免。Hermes 记忆条目（MEMORY.md / USER.md）的卫生靠的是 p49 的写门槛 + 容量预算（超限即整理指引）。两者共享同一套"生命周期管理"思想——本页上表的动作在源码里的真实主语是技能。教学版 <code>curator()</code> 把这套思想迁移到记忆条目，是合理的教学再设计，但不是 Hermes 的原实现。</div>
+<div class="pagenum">51 / 100</div></section>
+<section class="page " id="p52"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.2 写入：三条通道全景 + 配套还原</h1>
+<h2>Hermes 写入层全景</h2>
+<div class="flow"><span class="box">模型 memory 工具(带门槛)</span><span class="arr">→</span><span class="box">后台评审(自动提取)</span><span class="arr">→</span><span class="box">策展(定期修剪)</span><span class="arr">→</span><span class="box">→ MEMORY.md / USER.md / provider</span></div>
+<h2>background_review 教学版（规则提取）</h2>
+<pre><code>def background_review(self, transcript):
+    saved = []
+    for sent in re.split(r"[。；;\n]", transcript):
+        sent = sent.strip()
+        if "记住" in sent or "我们" in sent:
+            r = self.add("memory", sent)      # 项目事实 → MEMORY.md
+        elif "我喜欢" in sent or "以后" in sent:
+            r = self.add("user", sent)        # 个人偏好 → USER.md
+        saved.append((kind, sent, r))
+    return saved</code></pre>
+<h2>教学版与真实版的差距</h2>
+<table><tr><th>环节</th><th>真实版</th><th>教学版</th></tr><tr><td>提取</td><td>fork 评审 agent 用 LLM 分析</td><td>关键词规则</td></tr><tr><td>写入</td><td>走 memory 工具 + 门槛 + 元数据</td><td>直接调 add()</td></tr><tr><td>调度</td><td>间隔/空闲触发，可配置</td><td>手动调用一次</td></tr></table>
+<div class="warn">真实评审的关键在 prompt 质量（"这段对话有什么值得长期记住的？
+按'项目事实/用户偏好/暂不记录'分类"）和<b>评审结果也要过写门槛</b>——
+自动通道更不能绕过防线。</div>
+<div class="pagenum">52 / 100</div></section>
+<section class="page " id="p53"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.3 读取：format_for_system_prompt</h1>
+<h2>读取侧很朴素：全量注入</h2>
+<p><span class="src">tools/memory_tool.py:706 · format_for_system_prompt() / _render_block:755</span></p>
+<p>启动时 <code>agent/agent_init.py:1855-1894</code> 调
+<code>MemoryStore.load_from_disk()</code> 加载两个文件，之后每次请求：</p>
+<pre><code>你是 Hermes 助手。
+
+## MEMORY.md（项目记忆）
+记住：我们订单接口的 P99 延迟基线是 320 ms
+
+## USER.md（用户画像）
+我喜欢用 markdown 表格</code></pre>
+<p>两个文件加起来上限约 3,600 字符（真实版），全量注入毫无压力。
+<b>它不做检索</b>——因为容量上限已经从源头把记忆库控制在"可以全量"的规模。</p>
+<h2>容量上限 = 检索需求的替代品</h2>
+<div class="ok">这是一个重要洞察：检索（Claude Code 轨道 B、OpenClaw 全家桶）
+解决的是"记忆太多放不下"。Hermes 用"写入端就限死容量"从另一个方向解决同一个问题。
+<b>如果你能守住写入纪律，可以完全不建检索系统。</b></div>
+<h2>注入的时点</h2>
+<ul><li>启动加载 + 每请求重读（文件可能被外部修改——drift 检测保证一致性）；</li>
+<li>工具集开关（<code>memory</code> toolset 启用才加载）——记忆功能可整体关闭。</li></ul>
+<div class="pagenum">53 / 100</div></section>
+<section class="page " id="p54"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.3 读取：外部 provider 的异步预取</h1>
+<h2>MemoryManager：provider 路线的读取</h2>
+<p><span class="src">agent/memory_manager.py</span></p>
+<table><tr><th>方法</th><th>行号</th><th>职责</th></tr><tr><td>build_system_prompt()</td><td>:525</td><td>把 provider 检索结果组装成记忆块</td></tr><tr><td>prefetch_all / queue_prefetch_all</td><td>:564 / :673</td><td>异步预取：请求发出前先并行拉各 provider</td></tr><tr><td>sync_all</td><td>:714</td><td>异步同步：写入排队批量提交</td></tr><tr><td>build_memory_context_block</td><td>:386</td><td>记忆块格式化</td></tr><tr><td>inject_memory_provider_tools</td><td>:137</td><td>把 provider 的检索工具注入给模型</td></tr><tr><td>describe_recall</td><td>:641</td><td>向模型描述「刚回忆了什么」</td></tr></table>
+<h2>异步预取：延迟工程</h2>
+<p>多个 provider 串行检索太慢。<code>queue_prefetch_all</code> 并行发起全部预取，
+主对话不被记忆检索阻塞——和 OpenClaw 的"检索进子进程"是同一个问题的两种解法
+（Python 用 asyncio，TypeScript 用子进程）。</p>
+<h2>CLI 运维面</h2>
+<p><span class="src">hermes_cli/subcommands/memory.py</span>：
+setup / status / off / reset——reset 可一键清空 MEMORY.md 与 USER.md。
+<b>记忆系统要有运维入口</b>：用户必须能一键"失忆"重来。</p>
+<div class="pagenum">54 / 100</div></section>
+<section class="page " id="p55"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.4 压缩：trajectory_compressor 逐行读</h1>
+<h2>压缩主力：轨迹压缩器</h2>
+<p><span class="src">trajectory_compressor.py:332 · class TrajectoryCompressor</span></p>
+<pre><code>class CompressionConfig(:83):
+    summary_target_tokens = 750   # 摘要目标长度：750 token
+
+count_trajectory_tokens(:469)     # 数 token
+_find_protected_indices(:477)     # 保护区间：不能压的消息
+_ensure_summary_prefix(:598)      # 摘要替换为单条 '[CONTEXT SUMMARY]:' 消息</code></pre>
+<h2>它的压缩产物</h2>
+<pre><code>[CONTEXT SUMMARY] 用户要求分析订单接口的延迟分布；
+已用脚本定位出 5 个慢查询模式；P99 阈值 320 ms；
+输出要求：markdown 表格 + ms 单位。剩余任务：拟合慢请求分布并出报告。</code></pre>
+<h2>750 token 的摘要预算</h2>
+<div class="note">摘要不是越短越好、也不是越长越好：太短丢关键约束（报告格式、单位），
+太长吃掉压缩收益。<b>给摘要设 token 预算</b>（750）并让 prompt 配合（"控制在 X 以内"）
+是可复制的做法。</div>
+<h2>保护区间</h2>
+<p><code>_find_protected_indices</code> 标记不可压缩的消息：最近几轮、
+系统消息、正在进行的工具调用对——思想与 OpenClaw 的 findCutPoint 一致：
+<b>压缩边界必须绕开结构性依赖</b>。</p>
+<h2>真实源码（带注释）：压缩配置与摘要前缀</h2>
+<p class="src">hermes-agent/trajectory_compressor.py:83-99 · :598-603（注释为讲解）</p>
+<pre><code>class CompressionConfig:
+    """Configuration for trajectory compression."""
+    # Compression targets
+    target_max_tokens: int = 15250      # 压缩后整个轨迹的目标上限
+    summary_target_tokens: int = 750    # 摘要本身只有 750 token 预算
+    # Protected turns —— 四类"第一条"消息全部保护：
+    protect_first_system: bool = True   # 系统提示
+    protect_first_human: bool = True    # 第一条用户消息（原始任务！）
+    protect_first_gpt: bool = True
+    protect_first_tool: bool = True
+    protect_last_n_turns: int = 4       # 最近 4 个回合永不压缩
+
+@staticmethod
+def _ensure_summary_prefix(summary: str) -&gt; str:
+    """Normalize summary text to include the expected prefix exactly once."""
+    # 给摘要打上统一标记 [CONTEXT SUMMARY]: ——
+    # 这正是 p56 识别旧摘要的依据；"恰好出现一次"的规范化
+    # 还能防止标记被复制多份、摘要被重复标记污染
+    text = (summary or "").strip()
+    if text.startswith("[CONTEXT SUMMARY]:"):
+        return text
+    return "[CONTEXT SUMMARY]:" if not text else f"[CONTEXT SUMMARY]: {text}"</code></pre>
+<div class="pagenum">55 / 100</div></section>
+<section class="page " id="p56"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.4 压缩：context_compressor 与恢复</h1>
+<h2>崩溃恢复向的压缩器</h2>
+<p><span class="src">agent/context_compressor.py</span></p>
+<table><tr><th>函数</th><th>行号</th><th>职责</th></tr><tr><td>salvage_grown_transcript</td><td>:524</td><td>抢救膨胀的对话记录（超限后的紧急处理）</td></tr><tr><td>_looks_like_compaction_summary</td><td>:466</td><td>识别「哪些消息已经是摘要」——避免摘要套摘要</td></tr><tr><td>_build_anchor_index</td><td>:1118</td><td>锚点索引：原文↔摘要的对应关系</td></tr><tr><td>_build_recovery_footer</td><td>:1057</td><td>恢复页脚：压缩后告诉模型「你在哪、之前干了啥」</td></tr></table>
+<h2>recovery footer：被低估的设计</h2>
+<p>压缩后模型面对的是一条陌生摘要。recovery footer 在其后追加一段"你现在在哪"
+的导航信息（当前任务、下一步、关键约束），<b>把"失忆"的突兀感降到最低</b>——
+类似给刚接手的同事写一封交接邮件。</p>
+<h2>识别旧摘要：摘要套摘要问题</h2>
+<div class="warn">压缩会重复发生。第二次压缩的输入里已有第一次的摘要——
+如果不识别并特殊处理（保留/合并而非再压一层），摘要会层层失真。
+<code>_looks_like_compaction_summary</code> 通过标记识别旧摘要。
+凡是会多次压缩的系统都必须处理这个问题。</div>
+<h2>真实源码（带注释）：旧摘要识别与恢复页脚</h2>
+<p class="src">hermes-agent/agent/context_compressor.py:466-491 · :1057-1074（注释为讲解）</p>
+<pre><code>def _looks_like_compaction_summary(msg, content) -&gt; bool:
+    # 必须以摘要结束标记收尾，且不是"合并载体"——
+    # 合并载体里还带着真实的最新用户请求，截断它会删掉活文本
+    if not content.rstrip().endswith(_SUMMARY_END_MARKER): return False
+    if content.startswith(_MERGED_PRIOR_CONTEXT_HEADER): return False
+    # 关键防线：内容启发式永远不能单独授权改动"活回合"。
+    # 压缩器生成的摘要带私有元数据标记；普通用户输入、
+    # 只是引用了摘要标题的回复，都没有这个标记
+    if msg.get("role") == "tool": return False
+    if msg.get("role") in ("user", "assistant") \
+       and not msg.get(COMPRESSED_SUMMARY_METADATA_KEY):
+        return False
+    head = content[:280]
+    return bool(msg.get(COMPRESSED_SUMMARY_METADATA_KEY)) \
+        or "CONTEXT COMPACTION" in head or "[CONTEXT COMPACTION]" in head \
+        or "Conversation Summary" in head
+
+def _build_recovery_footer(session_id, region_len) -&gt; str:
+    """Deterministic pointer to the compacted region in session history.
+    ... The footer makes that re-access path explicit so the model
+    treats compaction as deferred retrieval, not loss."""
+    # ↑ docstring 即设计哲学：压缩是"延迟检索"，不是"丢失"
+    return ("...\n"
+        f"The {region_len} compacted message(s) remain fully preserved in "
+        "session history. If you need any detail this summary does not carry "
+        "(exact command output, file contents, error text, earlier "
+        "reasoning), recover it with: "
+        f"session_search(query='&lt;keywords&gt;', session_id='{session_id}') — "
+        "do not guess at lost specifics when you can look them up.")</code></pre>
+<div class="ok">recovery footer 不只是"交接说明"：它给了模型一个<b>可执行的找回动作</b>（session_search + 会话 ID）。"不要猜，去查"——把失忆从被动损失变成主动可逆。</div>
+<div class="pagenum">56 / 100</div></section>
+<section class="page " id="p57"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.4 压缩：提交围栏与 native compaction</h1>
+<h2>可靠性巅峰：CompressionCommitFence</h2>
+<p><span class="src">agent/conversation_compression.py:637</span></p>
+<p>压缩流程：快照 → 生成摘要 → 原子提交。若中途崩溃，
+围栏保证要么旧历史完好、要么新摘要完好，绝不出现半压状态：</p>
+<pre><code>class CompressionCommitFence(:637):
+    # attempt 快照 / 租约 —— 压缩像一次"事务"
+    # 压缩后 _refresh_agent_tool_definitions(:244) 刷新工具定义
+    # （因为旧的工具结果被摘掉了，工具状态需要与新上下文对齐）</code></pre>
+<h2>native_compaction.py：借用模型厂商的能力</h2>
+<p><span class="src">agent/native_compaction.py:169 · native_compaction_context_management</span></p>
+<p>部分模型厂商提供原生的上下文管理 API（服务端自动裁剪历史）。
+Hermes 的态度：<b>有就用，但本地实现保留</b>——
+<code>prune_pre_checkpoint_items</code>（:320）在检查点之前裁剪本地侧冗余。</p>
+<h2>Hermes 压缩全家福</h2>
+<div class="flow"><span class="box">trajectory(主力摘要)</span><span class="arr">→</span><span class="box">context(抢救/恢复)</span><span class="arr">→</span><span class="box">native(厂商能力)</span><span class="arr">→</span><span class="box">围栏(原子提交)</span><span class="arr">→</span><span class="box">显示层(compaction_display)</span></div>
+<p class="src">另有 agent/compaction_display.py、agent/manual_compression_feedback.py 管压缩过程的 UI 呈现与用户反馈。</p>
+<h2>真实源码（带注释）：提交围栏的并发设计</h2>
+<p class="src">hermes-agent/agent/conversation_compression.py:637-686（节选，注释为讲解）</p>
+<pre><code>class CompressionCommitFence:
+    """Fence timeout cancellation against post-summary session mutation.
+    ... This fence makes the commit boundary deterministic: cancellation
+    either wins before session mutation starts, or waits until an
+    already-started commit is fully complete ..."""
+    # ↑ 目标明确：取消 vs 提交只有两种合法结局——
+    #   取消赶在提交前赢，或等已开始的提交彻底完成
+
+    def __init__(self, total_ceiling_seconds=None):
+        self._lock = threading.Lock()
+        self._cancelled = False
+        self._commit_started = False
+        # 提交阶段标记：Event 无锁可读——即使提交卡死持锁，
+        # 宿主仍能观测"有提交在途"，超时警告不会被锁饿死（#76354 F1）
+        self._commit_phase = threading.Event()
+        # 准入撤销：任何宿主 unwind（中断/取消/异常）都置位，
+        # 保证不再有"未来的提交"被放行（#76354 F2）
+        self._admission_revoked = False
+        # 持有者限定的锁释放钩子：超时宿主调它释放租约，
+        # 不会误删新持有者的行（DB 释放按持有者限定，无 ABA）（#76354 F4）
+        self._lock_release_guard = threading.Lock()
+        # 前进遥测：摘要流式输出每产出一个 token 就 touch 一次——
+        # 等待者据此区分"慢但活着"与"真挂了"，慢模型不背固定超时的锅
+        self._last_progress = time.monotonic()</code></pre>
+<div class="note">教学版说"快照→生成摘要→原子提交"只讲了主干。真实围栏处理的全是并发边角：取消与提交的竞态、锁内卡死时的可观测性、租约的持有者限定释放、慢模型与挂死模型的区分。压缩的可靠性 = 主干 20 行 + 边角 200 行。</div>
+<div class="pagenum">57 / 100</div></section>
+<section class="page " id="p58"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.5 Prompt 实例：双文件注入（真实输出）</h1>
+<h2>后台评审提取后的完整 system prompt（真实运行输出）</h2>
+<pre><code>你是 Hermes 助手。
+
+## MEMORY.md（项目记忆）
+记住：我们订单接口的 P99 延迟基线是 320 ms
+
+## USER.md（用户画像）
+我喜欢用 markdown 表格</code></pre>
+<h2>提取日志（真实运行输出）</h2>
+<pre><code>[memory] OK: 记住：我们订单接口的 P99 延迟基线是 320 ms
+[user]   OK: 我喜欢用 markdown 表格
+[memory] SKIPPED_DUPLICATE: 记住：我们订单接口的 P99 延迟基线是 320 ms</code></pre>
+<h2>逐行解读</h2>
+<ol>
+<li>同一句对话内容，按语义分流：<b>"我们公司…"进项目记忆，"我喜欢…"进用户画像</b>
+——这是双文件设计的直接收益；</li>
+<li>第三行是重复提交被写门槛拦截——注意它<b>不报错</b>，返回 <code>SKIPPED_DUPLICATE</code>
+让调用方（模型或评审）明确知道"已存在，无需再写"；</li>
+<li>prompt 中两个文件各占一个带标题的块——模型能区分"这是事实"和"这是偏好"，
+调用时行为更精准。</li>
+</ol>
+<div class="ok">对比三家注入形态：Claude Code 记忆无标注融入、OpenClaw 带分数标注、
+Hermes 分语义块。三者都正确——按各自记忆量与调试需求选择了不同形态。</div>
+<div class="pagenum">58 / 100</div></section>
+<section class="page " id="p59"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.6 小结：Hermes 的设计取舍</h1>
+<h2>它选择了什么、放弃了什么</h2>
+<table><tr><th>选择</th><th>放弃</th><th>理由</th></tr><tr><td>三通道写入(工具/评审/策展)</td><td>简单性</td><td>不漏记 + 质量 + 卫生,三全</td></tr><tr><td>双文件全量注入</td><td>无限记忆量</td><td>写入纪律替代检索系统</td></tr><tr><td>四级压缩 + 提交围栏</td><td>实现轻量</td><td>Python 长会话的可靠性</td></tr><tr><td>provider 可插拔</td><td>统一简单</td><td>规模化时的逃生通道</td></tr></table>
+<h2>五家最长的一段路</h2>
+<div class="flow"><span class="box">memory_tool(门槛)</span><span class="arr">→</span><span class="box">background_review(提取)</span><span class="arr">→</span><span class="box">curator(策展)</span><span class="arr">→</span><span class="box">format_for_prompt(注入)</span><span class="arr">→</span><span class="box">trajectory 压缩(围栏)</span></div>
+<h2>可以直接抄走的四条经验</h2>
+<ol>
+<li><b>写门槛</b>：互相包含即拒写，十几行代码守住记忆库卫生；</li>
+<li><b>评审兜底</b>：主对话之外定期回看，漏记率趋近于零，来源打标可追溯；</li>
+<li><b>recovery footer</b>：压缩后附"交接邮件"，降低失忆突兀感；</li>
+<li><b>摘要套摘要必须识别</b>：多次压缩是常态不是例外。</li>
+</ol>
+<div class="pagenum">59 / 100</div></section>
+<section class="page " id="p60"><div class="part-tag">第 3 章 · Hermes：全链路记忆流水线</div><h1>3.6 小结：与配套 Python 代码的对照表</h1>
+<h2>真实源码 ↔ 教学实现</h2>
+<table><tr><th>真实机制</th><th>真实源码</th><th>教学实现</th></tr><tr><td>MemoryStore 双文件</td><td>tools/memory_tool.py:159</td><td>HermesMemory.files</td></tr><tr><td>字符上限</td><td>2200 / 1375</td><td>400 / 250</td></tr><tr><td>写门槛</td><td>_apply_write_gate:949</td><td>_write_gate()</td></tr><tr><td>后台评审</td><td>background_review.py:465</td><td>background_review()</td></tr><tr><td>策展</td><td>curator.py:305</td><td>curator()</td></tr><tr><td>全量注入</td><td>format_for_system_prompt:706</td><td>build_system_prompt()</td></tr><tr><td>轨迹压缩</td><td>trajectory_compressor.py:332</td><td>（用 ClaudeCode.autocompact 演示骨架）</td></tr></table>
+<h2>建议的动手顺序</h2>
+<ol>
+<li>运行 lab，看第 3 节输出（提取 → 门槛拦截 → 注入）；</li>
+<li>给 <code>background_review</code> 换成真 LLM 调用（哪怕是最简单的 API 包装）；</li>
+<li>把 <code>curator</code> 扩展成"合并同类项"：两条都提到接口基线的合并成一条；</li>
+<li>给 <code>HermesMemory</code> 加 <code>.bak</code> 备份和 drift 检测（学 :839 的思想）。</li>
+</ol>
+<div class="ok">完成这四步，你实现的就是一个可日常使用的个人记忆系统。</div>
+<div class="pagenum">60 / 100</div></section>
+<section class="page " id="p61"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>第 4 章导读：dsh 的记忆世界观</h1>
+<h2>分析对象</h2>
+<p>仓库 <span class="src">D:/memory/deepseek-harness</span>（TypeScript monorepo + Python SDK）。</p>
+<h2>它的记忆世界观：记忆是生态的事，不是框架的事</h2>
+<p>dsh 是五家里唯一<b>明确不做内建记忆</b>的。它的文档直接说明立场：框架只负责"桥接"，
+把外部记忆服务接入 agent，记忆存哪、怎么检索是上游 server 的事。
+但别以为它没贡献——dsh 的<b>会话持久化与事件化压缩</b>是五家里设计最精巧的，
+而且"记忆工具化"这条路对初学者是最快能跑通的。</p>
+<h2>本章地图（12 页）</h2>
+<table><tr><th>小节</th><th>页码范围</th><th>内容</th></tr><tr><td>4.1 MCP 记忆桥</td><td>p62-63</td><td>外接记忆 server 的配置与工具化</td></tr><tr><td>4.2 工具化记忆的利弊</td><td>p64-65</td><td>与自动注入的对比</td></tr><tr><td>4.3 会话存储</td><td>p66-68</td><td>JSONL/SQLite/projection 多实现</td></tr><tr><td>4.4 事件化压缩</td><td>p69-71</td><td>compaction 事件括号 + 替换节点</td></tr><tr><td>4.5 小结</td><td>p72</td><td>取舍 + Python 对照</td></tr></table>
+<div class="pagenum">61 / 100</div></section>
+<section class="page " id="p62"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.1 MCP 记忆桥：三套参考配置</h1>
+<h2>官方文档的立场</h2>
+<p><span class="src">docs/user/guide/mcp-memory.md</span></p>
+<p>dsh 提供三套默认关闭的 MCP 记忆 server 参考配置：</p>
+<table><tr><th>server</th><th>特点</th><th>配置目录</th></tr><tr><td>Memorix</td><td>通用记忆服务</td><td>apps/cli/config/examples/mcp-memory/</td></tr><tr><td>MCP Reference Memory</td><td>官方参考实现</td><td>同上</td></tr><tr><td>Engram</td><td>记忆检索服务</td><td>同上</td></tr></table>
+<h2>MCP 是什么（30 秒版）</h2>
+<p>MCP（Model Context Protocol）是给模型接外部工具/数据的协议。一个 MCP server
+对外暴露若干工具，agent 框架通过 MCP client 调用它们，工具名约定为
+<code>mcp__&lt;server&gt;__&lt;tool&gt;</code>。</p>
+<h2>dsh 的桥接方式</h2>
+<p><span class="src">@deepseek-ai/dsh-mcp-client · apps/cli/tests/memory-mcp-configs.spec.ts</span></p>
+<div class="flow"><span class="box">记忆 server(Memorix 等)</span><span class="arr">→</span><span class="box">MCP 协议</span><span class="arr">→</span><span class="box">dsh mcp-client</span><span class="arr">→</span><span class="box">包装成 mcp__memory__* 工具</span><span class="arr">→</span><span class="box">模型按需调用</span></div>
+<div class="ok">这意味着：接入记忆，dsh 这边是<b>零代码</b>——写一份 server 配置就行。
+框架的"记忆功能"退化成"配置文件"。</div>
+<h2>真实源码（带注释）：三套参考配置原文</h2>
+<p class="src">deepseek-harness/apps/cli/config/examples/mcp-memory/*.cordis.yml</p>
+<pre><code># memorix.cordis.yml —— 通用记忆服务，stdio 本地进程
+- insert:
+    - id: memory-memorix
+      name: '@deepseek-ai/dsh-mcp-client'  # 框架侧只出现这一个桥接组件
+      config:
+        serverName: memorix
+        transport: stdio
+        command: memorix                   # DSH 只负责拉起进程，不装依赖
+        args: [serve]
+        cwd: !!js process.cwd()
+
+# mcp-reference-memory.cordis.yml —— 官方参考实现，可指定存储文件路径
+- insert:
+    - id: memory-mcp-reference
+      config:
+        serverName: reference_memory
+        command: mcp-server-memory
+        env:
+          MEMORY_FILE_PATH: !!js &gt;-  # 默认落到 ~/.dsh-mcp-reference-memory.jsonl
+            process.env.MEMORY_FILE_PATH?.trim() || ...join(homedir(),
+              '.dsh-mcp-reference-memory.jsonl')
+
+# engram.cordis.yml —— 检索型记忆服务，存储与项目选择由 Engram 自管
+- insert:
+    - id: memory-engram
+      config: { serverName: engram, transport: stdio, command: engram, args: [mcp] }</code></pre>
+<div class="note">三份配置的共同点：框架侧永远是同一个 <code>@deepseek-ai/dsh-mcp-client</code>，变的只是 command 和参数。"记忆功能 = 配置文件"在源码层面成立。</div>
+<div class="pagenum">62 / 100</div></section>
+<section class="page " id="p63"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.1 MCP 记忆桥：配套 Python 还原</h1>
+<h2>教学版：模拟一个外部记忆 server</h2>
+<p><span class="src">agent_memory_lab_v2.py · DshMcpMemoryServer + DshAgent</span></p>
+<pre><code>class DshMcpMemoryServer:
+    """模拟一个外部 MCP memory server（如 Memorix / Engram）"""
+    def store_memory(self, text):
+        self.store.append(text)
+        return f"stored #{len(self.store)}"
+
+    def retrieve(self, query, top_k=2):
+        scored = sorted(((overlap_score(query, t), t) for t in self.store), ...)
+        return [t for s, t in scored[:top_k] if s > 0.01]
+
+class DshAgent:
+    @property
+    def tools(self):
+        return [{"function": {"name": "mcp__memory__store", ...}},
+                {"function": {"name": "mcp__memory__retrieve", ...}}]</code></pre>
+<h2>真实运行输出</h2>
+<pre><code>system prompt: 你是 DSH 助手。你可以使用 mcp__memory__store /
+              mcp__memory__retrieve 工具管理长期记忆。
+工具列表: ['mcp__memory__store', 'mcp__memory__retrieve']
+调用 mcp__memory__store:    stored #1
+调用 mcp__memory__retrieve: ["订单接口 P99 基线 320 ms"]</code></pre>
+<div class="note">注意 system prompt 里的关键差别：dsh 的记忆<b>不出现在 prompt 里</b>，
+prompt 里只有"说明书"（怎么用记忆工具）。记忆内容按需通过工具调用的结果进入上下文。</div>
+<div class="pagenum">63 / 100</div></section>
+<section class="page " id="p64"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.2 工具化记忆的利与弊</h1>
+<h2>工具化记忆 vs 自动注入：本质区别</h2>
+<table><tr><th>维度</th><th>自动注入 (CC/OC/Hermes)</th><th>工具化 (dsh)</th></tr><tr><td>记忆如何进入上下文</td><td>框架拼进 system prompt</td><td>模型主动调用 retrieve 的返回值</td></tr><tr><td>谁决定带什么</td><td>框架/检索/门控</td><td>模型自己</td></tr><tr><td>token 成本</td><td>每请求都付（注入的记忆常驻）</td><td>只在检索时付</td></tr><tr><td>漏带风险</td><td>低（框架保证）</td><td>高（模型可能忘记查）</td></tr><tr><td>实现成本</td><td>高（检索/门控/压缩）</td><td>低（一个工具定义）</td></tr></table>
+<h2>漏带风险的真实形态</h2>
+<div class="warn">模型看到任务"分析延迟对照基线"时，它怎么知道库里有"P99 阈值 320 ms"这条记忆？
+它不知道——工具列表只说"按查询取相关记忆"。是否调 retrieve 全凭模型判断。
+实践中缓解方法：在 system prompt 里写"处理 X 类任务前先查记忆"，或框架在特定时机
+自动代查一次塞进上下文（OpenClaw 的 trigger-recall 就是这种"自动代查"的精细化）。</div>
+<h2>工具化的适用场景</h2>
+<ul>
+<li>记忆库巨大且检索昂贵（每次全量注入不现实）；</li>
+<li>任务多样，预注入大概率浪费；</li>
+<li>框架侧工程资源有限——先让记忆"能用"。</li>
+</ul>
+<div class="pagenum">64 / 100</div></section>
+<section class="page " id="p65"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.2 工具化记忆：给初学者的建议</h1>
+<h2>如果你只有一天时间做记忆功能</h2>
+<p>工具化是首选路线：</p>
+<ol>
+<li>建一个 SQLite 表（或 JSON 文件）；</li>
+<li>定义两个工具：<code>memory_store(text)</code> 和 <code>memory_retrieve(query)</code>；</li>
+<li>在 system prompt 写明使用时机；</li>
+<li>结束。总共一天内可上线，且已经比 NaiveAgent 强一个段位。</li>
+</ol>
+<h2>之后的升级路径</h2>
+<div class="flow"><span class="box">工具化(dsh,1天)</span><span class="arr">→</span><span class="box">→ 加自动注入偏好块(Hermes,1周)</span><span class="arr">→</span><span class="box">→ 加检索门控(OpenClaw,1月)</span><span class="arr">→</span><span class="box">→ 加评审策展流水线(Hermes 完全体)</span></div>
+<h2>再进一步：会话也外包吗？</h2>
+<p>dsh 没有把会话历史外包——恰恰相反，会话存储是它做得最重的部分（下一节）。
+这印证了第 0 章的边界划分：<b>"进 prompt 的浓缩记忆"可以外包，
+"翻得动的会话历史"是框架的本分</b>——因为压缩、恢复、分支都依赖对会话结构的精细控制。</p>
+<div class="pagenum">65 / 100</div></section>
+<section class="page " id="p66"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.3 会话存储：SessionStore 抽象</h1>
+<h2>核心抽象</h2>
+<p><span class="src">packages/core/session/src/index.ts:423 · Session / :790 · SessionStore(Service)</span></p>
+<p>dsh 把"会话"建模为一等公民：<code>Session</code> 是带完整事件流的对象，
+<code>SessionStore</code> 是作为服务注册的存储后端。</p>
+<h2>一族可替换实现</h2>
+<table><tr><th>包</th><th>职责</th></tr><tr><td>session-persistence-jsonl</td><td>JSONL 追加写：人类可读、易备份、崩溃安全</td></tr><tr><td>session-persistence-sqlite</td><td>SQLite：可查询、可建索引</td></tr><tr><td>session-projection (+cache)</td><td>投影：从事件流推导出视图（如当前消息列表）</td></tr><tr><td>session-log-deepseek</td><td>DeepSeek 日志格式对接</td></tr><tr><td>session-title-llm</td><td>用小模型给会话起标题</td></tr></table>
+<h2>事件溯源（event sourcing）思想</h2>
+<div class="ok">注意 projection 这个词：dsh 不存"当前状态"，存<b>事件流</b>，
+当前状态是事件流投影出来的。好处：历史永不丢失、任何时刻可重建状态、
+可做时间旅行调试。压缩也建立在这个基础上——压缩只是"新增一种事件"，不破坏原始流。</div>
+<h2>真实源码（带注释）：事件溯源会话的本体</h2>
+<p class="src">deepseek-harness/packages/core/session/src/index.ts:411-452 · :784-800（节选，注释为讲解）</p>
+<pre><code>/**
+ * An event-sourced session: an append-only log of SessionEvents.
+ * Plain class (not a Service) — create live instances via ctx.sessions.create()
+ * and detached instances via create. Seeding with an existing event log
+ * replays/forks a session.   // ← 用现有日志做种子 = 重放或分叉一个会话
+ */
+export class Session {
+  private log: SessionEvent[] = []
+  private readonly surfaceManager = new SurfaceManager(this.log)
+  get surface() { return this.surfaceManager }   // 表面是派生视图，不是存储
+  get id() { return this.header.id }             // 身份来自持久头的一份拷贝
+  readonly firstLiveSeq: number  // 本进程 append 的第一个 seq（种子长度+1）
+}
+
+/**
+ * In-memory session store (ctx.sessions).
+ * Persistence is intentionally not implemented here — persistence plugins
+ * subscribe to 'session/event' and flush on 'session/flush' / dispose.
+ * ↑ 存储服务故意不做持久化：持久化是插件的事——
+ *   插件订阅 session/event，在 flush/dispose 时落盘
+ */
+export class SessionStore extends Service {
+  private store = new Map&lt;SessionId, SessionEntry&gt;()
+  ...
+}</code></pre>
+<div class="note">两个"故意不做"值得注意：Session 是纯类不是服务（便于脱离容器创建/播种）；SessionStore 故意不持久化（JSONL/SQLite 插件靠订阅事件流接入）。核心只管事件日志，落盘方式完全可插拔。</div>
+<div class="pagenum">66 / 100</div></section>
+<section class="page " id="p67"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.3 会话存储：SurfaceManager</h1>
+<h2>Surface：会话的"形态管理层"</h2>
+<p><span class="src">packages/session/surface.ts:398 · SurfaceManager</span></p>
+<p>Surface 管"会话当前以什么样子呈现/参与对话"：哪些节点可见、哪些被折叠、
+哪些被压缩结果替换。<code>SurfaceFoldReplacement</code> 支持把一段历史折叠并替换为节点。</p>
+<h2>为什么 UI 和记忆有关系</h2>
+<div class="warn">压缩不只是模型的事——用户在界面上要能看到"这段历史被折叠成摘要了"，
+必要时展开查看原文。dsh 把这件事做进会话结构（而非 UI 补丁），
+意味着压缩状态是<b>可审计、可恢复、可展开</b>的。
+对比：很多实现压缩后原文直接没了，用户想回看也不行。</div>
+<h2>Python SDK 的克制</h2>
+<p><span class="src">python/sdk/src/deepseek_harness/（api.py / client.py / models.py）</span></p>
+<p>Python SDK 完全没有 memory 模块——连桥接都不在 SDK 层做，
+进一步确认 dsh 的分层：<b>记忆=MCP 生态（可选），会话=框架本体（核心）</b>。</p>
+<h2>真实源码（带注释）：表面折叠——append 与 replace 的实现</h2>
+<p class="src">deepseek-harness/packages/core/session/src/surface.ts:321-378 · :397-460（节选，注释为讲解）</p>
+<pre><code>function planSurfaceEvent(state, event, expectedSeq, events, baseSeq) {
+  if (event.seq !== expectedSeq)
+    throw new Error(`seq is not contiguous; expected ${expectedSeq}`)
+    // ↑ seq 必须连续：事件流完整性在入列校验层就守住
+  const surfaceOp = surfaceOpOf(event)
+  if (surfaceOp === undefined) return          // 非表面事件不产生节点
+  if (surfaceOp === 'append') {
+    assertProvenance(event, [])                // 追加不许声明来源
+    return { kind: 'append', seq: event.seq }
+  }
+  const range = replacementRange(state, surfaceOp)
+  assertProvenance(event, range.shadowedSeqs)  // 替换必须声明覆盖了哪些节点
+  assertToolResultRewrite(event, range.shadowedSeqs, events, baseSeq)
+  return { kind: 'replace', seq: event.seq, start, end, ...range }
+}
+
+function applySurfacePlan(state, plan) {       // 折叠的提交动作：
+  if (plan?.kind === 'append') {
+    state.nodes.push(plan.seq)                 // 追加 = push 一个 seq
+  } else if (plan?.kind === 'replace') {
+    // 替换 = splice：[startIdx, endIdx] 区间整体换成新 seq
+    state.nodes.splice(plan.startIdx, plan.endIdx - plan.startIdx + 1, plan.seq)
+    state.replaceGeneration += 1               // 替换代数 +1（缓存失效用）
+  }
+}
+// SurfaceFoldReplacement 记录每次替换：谁(seq)替换了哪个区间(start,end)、
+// 实际覆盖了哪些节点(shadowedSeqs) —— UI 展开"被折叠的原文"全靠它</code></pre>
+<div class="ok">surface.nodes 只是一列 seq 数字。所谓"压缩替换历史"，在数据结构上只是一次 splice；"原文可回看"靠的是替换事件必须携带 shadowedSeqs（被覆盖节点的原始 seq）——对应关系是校验强制的，不是约定。</div>
+<div class="pagenum">67 / 100</div></section>
+<section class="page " id="p68"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.3 会话存储：三种持久化的取舍</h1>
+<h2>JSONL vs SQLite vs 投影缓存</h2>
+<table><tr><th>后端</th><th>写入</th><th>读取</th><th>适合</th></tr><tr><td>JSONL</td><td>追加，极快，崩溃安全</td><td>全量扫描，慢</td><td>持久主存储（审计/回放）</td></tr><tr><td>SQLite</td><td>事务写</td><td>索引查询，快</td><td>检索、统计、跨会话查询</td></tr><tr><td>投影缓存</td><td>由事件推导</td><td>内存级，最快</td><td>agent 循环的高频读取</td></tr></table>
+<h2>组合拳</h2>
+<div class="flow"><span class="box">事件流 → JSONL(权威)</span><span class="arr">→</span><span class="box">投影 → 内存缓存(快)</span><span class="arr">→</span><span class="box">需要查询 → SQLite(索引)</span></div>
+<p>这是经典的 CQRS（命令查询职责分离）架构在 agent 会话上的应用：
+<b>写路径和读路径分开，各自选型</b>。</p>
+<h2>对初学者的启示</h2>
+<p>做 agent 不要直接把 messages 存内存完事。至少学 dsh 分两层：
+<b>append-only 的日志（JSONL 文件即可）+ 运行时列表</b>。
+有了日志，崩溃恢复、审计、调试、压缩实验（对日志重放）全部成为可能。</p>
+<h2>真实源码（带注释）：投影——事件流如何变成 messages[]</h2>
+<p class="src">deepseek-harness/packages/core/session/src/surface.ts:83-114 · index.ts:724-745（节选，注释为讲解）</p>
+<pre><code>export function deriveEventMessage(event: SessionEvent): Message | null {
+  // 刻意不穷举：只有"产消息"的事件才进历史；回合/步骤边界、
+  // chunk、usage、错误都是 trace/replay 数据，不进 prompt
+  switch (event.type) {
+    case 'user/message': return event.data      // 逐字透传，不加包装
+    case 'assistant/message':
+      // 空内容的 assistant 消息只是承载 max-tokens 步骤的 usage，
+      // 不得向模型注入一条无内容的助手回合
+      if (event.data.message.content.length === 0) return null
+      return event.data.message
+    case 'tool/result': return event.data.message
+    default: return null                        // 非表面事件投影为空
+  }
+}
+
+// Session.deriveMessages —— 增量投影 + 替换代数缓存：
+deriveMessages() {
+  const { nodes, replace_generation } = this.surface
+  if (generation !== this.derivedGeneration) {  // 发生过 replace → 全量重算
+    this.derived = []; this.derivedNodes = 0
+    this.derivedGeneration = generation
+  }
+  for (const seq of nodes.slice(this.derivedNodes))  // 否则只处理新增节点
+    { const msg = this.deriveEventMessage(this.log[seq])
+      if (msg) this.derived.push(msg) }
+  return [...this.derived]
+}</code></pre>
+<div class="note">这就是本页表格里"投影缓存"的真身：平时增量（只处理新 seq），一旦发生替换（replace_generation 变化）就整段重建。事件溯源系统的成本控制教科书。</div>
+<div class="pagenum">68 / 100</div></section>
+<section class="page " id="p69"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.4 事件化压缩：事件括号</h1>
+<h2>压缩是一种"事件"，不是"改写"</h2>
+<p><span class="src">packages/core/session/src/types.ts:312</span></p>
+<p>dsh 在会话事件流里定义了一对括号事件：</p>
+<pre><code>compaction/start     ← 压缩从这里开始
+  seed history       ← 被压缩的历史作为 seed 附在事件里
+compaction/end       ← 压缩结束
+
+surface-replacing 节点(:356)  ← 压缩产物：一个"替换节点"挂进会话树</code></pre>
+<h2>与"直接删旧消息"的本质区别</h2>
+<table><tr><th>做法</th><th>原始历史</th><th>可回看</th><th>可审计</th><th>崩溃安全</th></tr><tr><td>直接删/改写消息列表</td><td>丢失</td><td>否</td><td>否</td><td>危险</td></tr><tr><td>事件括号 + 替换节点</td><td>完整保留在 seed/日志中</td><td>可展开</td><td>有起止边界</td><td>追加写,安全</td></tr></table>
+<h2>配套代码层的表现</h2>
+<p>会话启动时可以有多种来源，其中一种就是 <code>'compact'</code>
+（<span class="src">packages/core/agent/src/runtime-types.ts:69</span>）——
+<b>"从压缩点恢复"是一种合法的会话启动方式</b>，与"从零开始""从存档恢复"并列。</p>
+<h2>真实源码（带注释）：compaction 事件括号与替换操作</h2>
+<p class="src">deepseek-harness/packages/compaction/compaction/src/types.ts:21-24, 70-72 · packages/core/session/src/types.ts:330-361（节选，注释为讲解）</p>
+<pre><code>// compaction 事件类型不在 core/session 里，而是通过 declaration merging
+// 增补进 SessionEventMap（插件化事件系统的常见做法）
+interface SessionEventMap {
+  'compaction/start': { compactionId: CompactionId; turn: number | null }
+  // ↑ turn: number | null —— number 表示嵌在某回合内的自动压缩，
+  //   null 表示回合之间的独立手动压缩事务；start 到 end 之间持有锁
+
+  'compaction/summary': {
+    compactionId: CompactionId
+    summary: ContentBlock[]                        // 摘要内容本体
+    shadowedRange: { start: number; end: number }  // 被摘要覆盖的表面节点区间
+    shadowedSeqs: number[]                         // 被覆盖节点的原始 seq（可回溯）
+    shadowedTokenCount: number                     // 被覆盖内容的估算 token（计量用）
+    provider: string                               // 生成摘要用的模型路由
+  }
+  'compaction/end': { compactionId: CompactionId; turn: number | null; error?: string }
+  // ↑ error 字段：失败的压缩也留痕——事件溯源下"尝试过但失败"也是历史
+}
+
+// 表面层替换操作：压缩产物就是一次 replace——把 [start, end] 区间
+// 替换为一个新节点，且新节点的 sourceEventSeqs 必须包含全部被覆盖
+// 节点（原文与摘要的对应关系是类型强制的，不是约定）
+export type SurfaceOp =
+  | 'append'
+  | { op: 'replace'; start: number; end: number }</code></pre>
+<div class="warn">勘误与补充：V1 曾把事件括号的定义位置写作 <code>core/session/src/types.ts:312</code>，实际类型通过 declaration merging 定义在 <code>packages/compaction/compaction/src/types.ts</code>；core 里定义的是上面的 <code>SurfaceOp</code> 替换操作。摘要事件里连"被覆盖内容的 token 数"都记账——事件溯源的可审计性细致到这个程度。</div>
+<h2>真实源码（带注释）：压缩事务的完整时序</h2>
+<p class="src">deepseek-harness/packages/compaction/compaction-basic/src/region.ts:185-231（compactSurfaceRegion，节选，注释为讲解）</p>
+<pre><code>const compactionId = CompactionId(randomUUID())
+const lifecycle = { compactionId, sourceCommandId?, turn: owner }
+const startEvent = session.append('compaction/start', lifecycle)  // ① 开括号(持锁)
+try {
+  const prepared   = prepareCompaction(dependencies, session, selection)
+  const summarized = await summarizeCompaction(...)                // ② 生成摘要
+  assertStable(dependencies, session, summarized)
+  // ③ 稳定性断言：压缩期间表面没被别人改过（并发写会让区间失效）
+  stage = 'commit'
+  const pending = commitCompactionBody(session, startEvent, summarized)
+  // ④ 提交：以 surfaceOp replace 追加替换节点（即 p67 的那次 splice）
+  const endEvent = session.append('compaction/end', lifecycle)     // ⑤ 闭括号(放锁)
+  result = completeCompaction(pending, endEvent)
+} catch (error) {
+  failure = { error, stage: closing ? 'commit' : stage }
+  if (!closing) {
+    // ⑥ 失败也要闭括号——带上 error 链：失败的压缩同样是合法历史
+    session.append('compaction/end', { ...lifecycle, error: errorChain(error) })
+  }
+}</code></pre>
+<div class="ok">当一段事务代码读：开锁（start）→ 干活（摘要）→ 验证（表面未变）→ 提交（replace 节点）→ 放锁（end）。任何一步失败，锁都经由带 error 的 end 事件释放——日志里永远不会出现"只有 start 没有 end"的悬空事务。</div>
+<div class="pagenum">69 / 100</div></section>
+<section class="page " id="p70"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.4 事件化压缩：UI 侧的渲染</h1>
+<h2>客户端怎么画压缩</h2>
+<p><span class="src">packages/client/ui-chat/src/client/conversation-nodes/compaction.ts</span></p>
+<p>UI 收到会话节点流时，遇到 surface-replacing 节点就渲染成一个可交互的
+"压缩块"：显示"此处有 N 条历史已折叠为摘要"，用户可展开查看 seed 原文。</p>
+<h2>这个设计的完整收益清单</h2>
+<ol>
+<li><b>信任</b>：用户亲眼看到压缩边界，知道模型"记得多少"；</li>
+<li><b>调试</b>：出问题时展开 seed，核对摘要是否遗漏关键信息；</li>
+<li><b>实验</b>：可以在任何历史节点上重新做压缩实验（日志重放），对比策略优劣；</li>
+<li><b>合规</b>：原文从未被删除，满足审计需求。</li>
+</ol>
+<h2>五家压缩设计一览</h2>
+<table><tr><th>仓库</th><th>压缩的载体</th><th>原文去向</th></tr><tr><td>Claude Code</td><td>messages 列表内替换</td><td>被摘要替换（有会话游标）</td></tr><tr><td>OpenClaw</td><td>compaction 模块产物</td><td>cap 上限内的摘要</td></tr><tr><td>Hermes</td><td>[CONTEXT SUMMARY] 消息 + 围栏</td><td>快照/锚点索引</td></tr><tr><td>dsh</td><td>事件括号 + 替换节点</td><td>seed 完整保留（最优）</td></tr></table>
+<div class="ok">就"原文保全"而言，dsh 的事件化方案是五家里最彻底的。</div>
+<div class="pagenum">70 / 100</div></section>
+<section class="page " id="p71"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.4 事件化压缩：Python 还原思路</h1>
+<h2>教学版如何还原事件括号</h2>
+<p>虽然 <code>agent_memory_lab_v2.py</code> 的 dsh 部分聚焦工具化记忆，
+但事件化压缩不难自己补上（留作练习），核心数据结构：</p>
+<pre><code>events = [
+  {"type": "user",      "content": "..."},
+  {"type": "tool",      "content": "..."},
+  {"type": "compaction/start", "seed": [...被压缩的消息...]},
+  {"type": "compaction/end",   "summary": "[摘要] ...",
+   "replaces": "surface-replacing 节点 id"},
+]
+def render_context(events):
+    # 遇到 compaction/end → 用 summary 代表 seed
+    # 其余事件原样进入上下文</code></pre>
+<h2>实现要点</h2>
+<ol>
+<li>事件流永远 append-only，压缩只<b>新增</b>两个事件；</li>
+<li>渲染上下文时解释事件（遇到替换节点用摘要）；</li>
+<li>seed 原文随 start 事件保存，UI 可展开；</li>
+<li>崩溃恢复 = 重放事件流，天然得到一致状态。</li>
+</ol>
+<div class="note">练习：把这个结构接到第 7 章的 <code>NaiveAgentFullPrompt</code> 上，
+让它在不丢原文的前提下获得压缩能力——这是理解"事件溯源"最直接的路径。</div>
+<div class="pagenum">71 / 100</div></section>
+<section class="page " id="p72"><div class="part-tag">第 4 章 · DeepSeek-Harness：外接 MCP 记忆</div><h1>4.5 小结：dsh 的设计取舍</h1>
+<h2>它选择了什么、放弃了什么</h2>
+<table><tr><th>选择</th><th>放弃</th><th>理由</th></tr><tr><td>记忆外包给 MCP</td><td>开箱即用的记忆</td><td>聚焦框架本体,记忆交给生态</td></tr><tr><td>记忆工具化</td><td>自动注入的确定性</td><td>成本最低的记忆路线</td></tr><tr><td>事件溯源会话存储</td><td>实现简单</td><td>压缩/恢复/审计全收益</td></tr><tr><td>压缩=事件,原文保全</td><td>存储体积</td><td>可回看可实验可合规</td></tr></table>
+<h2>可以直接抄走的三条经验</h2>
+<ol>
+<li><b>会话用 append-only 日志</b>（JSONL），状态由投影得出——一天就能落地，收益终身；</li>
+<li><b>压缩做成事件而不是改写</b>：start/end 括号 + seed 保全；</li>
+<li><b>"从压缩点恢复"是一种会话启动方式</b>：把压缩纳入会话生命周期模型。</li>
+</ol>
+<h2>与配套代码对照</h2>
+<table><tr><th>真实机制</th><th>真实源码</th><th>教学实现</th></tr><tr><td>MCP 工具命名</td><td>mcp__<server>__<tool></td><td>mcp__memory__store/retrieve</td></tr><tr><td>记忆 server 参考</td><td>docs/user/guide/mcp-memory.md</td><td>DshMcpMemoryServer</td></tr><tr><td>事件括号</td><td>types.ts:312</td><td>（p71 练习）</td></tr></table>
+<div class="pagenum">72 / 100</div></section>
+<section class="page " id="p73"><div class="part-tag">第 5 章 · NaiveAgent：全量拼接对照组</div><h1>第 5 章导读：一个诚实的反面教材</h1>
+<h2>分析对象</h2>
+<p><span class="src">agent_memory_lab_v2.py · NaiveAgentFullPrompt（教学实现）</span>，原型是最朴素的 agent 主循环：<b>每一轮都把全部历史原样拼接成完整 prompt 发给模型</b>，没有压缩、没有检索、没有长期记忆。这就是"无记忆"的严格定义——不是记忆少，而是除了当前窗口里的原文，什么都不存在。</p>
+<h2>它的全部：一个循环 + 全量拼接</h2>
+<pre><code>for step in range(MAX_STEPS):
+    # 每轮都把整个 messages 列表（system + 全部历史 + 全部工具输出）
+    # 原样发给模型 —— "直接拼全量提示词"，没有任何裁剪与整理
+    resp = client.chat.completions.create(model, messages, tools)
+    msg = resp.choices[0].message
+    messages.append(msg)                     # 历史只增不减
+    if not msg.tool_calls: return msg.content   # 结束
+    for call in msg.tool_calls:              # 执行工具，结果 append 进 messages
+        messages.append({"role": "tool", ...})
+# 就这么多。没有第二条路，也没有后悔药。</code></pre>
+<h2>它没有任何记忆机制</h2>
+<p>三个"没有"逐一对应前三章：没有<b>写入</b>（跨会话什么都不留）、没有<b>读取/注入</b>（无记忆可注入——全量拼接历史不叫注入策略）、没有<b>压缩</b>（消息只增不减）。这正是它进入本报告的原因：<b>它是所有记忆系统的"before"照片</b>。用它做基线，你能清楚衡量每种记忆机制买到了什么。</p>
+<div class="pagenum">73 / 100</div></section>
+<section class="page " id="p74"><div class="part-tag">第 5 章 · NaiveAgent：全量拼接对照组</div><h1>5.1 对照实验：全量拼接如何撑爆窗口</h1>
+<h2>配套代码的量化演示</h2>
+<pre><code>naive = NaiveAgentFullPrompt()
+for i in range(10):
+    size = naive.add_turn(f"第{i}轮分析任务", "x" * 500)  # 模拟大工具输出
+
+# 输出:
+10 轮后 messages 总字符: 6210，消息数: 31
+—— 全量拼接、无压缩无检索，上下文只增不减，迟早撑爆窗口</code></pre>
+<h2>真实任务里更严重，而且成本是平方级的</h2>
+<p>演示中工具输出只模拟了 500 字符。真实的分析任务里：一次压测的原始 JSON 动辄几十万字符、一张渲染图 base64 后同样量级——<b>真实膨胀速度是演示的百倍以上</b>。更隐蔽的是全量拼接的成本公式：第 1 轮的内容到第 N 轮时已被重复发送 N 次，<b>累计输入 ≈ 每轮新增量 × 轮数² / 2</b>——线性增长的历史带来平方级的账单。</p>
+<table><tr><th>轮数(真实工具输出)</th><th>累计上下文估算</th><th>状态</th></tr><tr><td>5 轮 × 100KB 输出</td><td>约 50 万字符</td><td>接近/超过多数模型窗口</td></tr><tr><td>15 轮</td><td>约 150 万字符</td><td>必然崩溃或被截断</td></tr></table>
+<div class="warn">MAX_STEPS=15 的步数上限其实间接救了它：任务没做完就强制结束，上下文还没来得及爆。把"压缩"偷懒成"直接终止"，代价是任务永远做不长。</div>
+<div class="pagenum">74 / 100</div></section>
+<section class="page " id="p75"><div class="part-tag">第 5 章 · NaiveAgent：全量拼接对照组</div><h1>5.2 它其实有三种「原始记忆」</h1>
+<h2>虽然没做记忆系统，但它悄悄受益于三个朴素机制</h2>
+<h2>① 文件系统即记忆（files-as-memory）</h2>
+<p>所有产物（压测数据、分析脚本、中间结果）都持久化在 <code>WORKDIR</code>，模型随时可以在代码里重新读文件——<b>环境状态本身就是一种外部记忆</b>。这是所有 coding agent 的隐性共同点：磁盘是最可靠的记忆。</p>
+<h2>② system prompt 即规则记忆</h2>
+<pre><code>SYSTEM_PROMPT = """你是接口性能分析助手。规则：
+1. 所有数字必须来自代码执行的结果。禁止目测估数字。
+2. 每次分析后保存图表并调用工具复查确认…
+3. 最终用 markdown 表格汇报数值…"""</code></pre>
+<p>这就是第 0 章说的"轨道 A"的手工版：把最重要的约束写死在 system prompt，永不遗忘、永不变形。缺点是不能跨会话积累——但它已经覆盖了该 agent 90% 的"必须记住"。</p>
+<h2>③ MAX_STEPS 即注意力保险</h2>
+<p>步数上限间接限制了上下文规模——粗暴但有效的降级保护。对应到第 1 章的框架：它等于把"压缩"替换成了"直接终止"。</p>
+<div class="pagenum">75 / 100</div></section>
+<section class="page " id="p76"><div class="part-tag">第 5 章 · NaiveAgent：全量拼接对照组</div><h1>5.3 给它动手术：按性价比排序的改造</h1>
+<h2>五步改造路线（每步都独立可用）</h2>
+<table><tr><th>优先级</th><th>改造</th><th>成本</th><th>收益</th></tr><tr><td>①</td><td>microcompact：清旧工具输出/旧图 base64</td><td>20 行</td><td>上下文立减 80%+</td></tr><tr><td>②</td><td>autoCompact：摘要替换旧消息</td><td>50 行</td><td>长任务可继续</td></tr><tr><td>③</td><td>工具化长期记忆(学 dsh)</td><td>1 天</td><td>跨会话记住标定参数</td></tr><tr><td>④</td><td>文件记忆 + 全量注入(学 Hermes)</td><td>1 天</td><td>标定/偏好自动生效</td></tr><tr><td>⑤</td><td>检索门控(学 OpenClaw)</td><td>1 周</td><td>记忆库规模化</td></tr></table>
+<h2>① 的具体位置</h2>
+<p>改造点就在教学版 <code>NaiveAgentFullPrompt.add_turn</code>：工具结果 append 进 messages 之前，检查"大体量且已确认"的结果（base64 图、原始压测 JSON）——上一轮模型已经确认过了，可以替换成 <code>"[已确认的结果: result_3.json]"</code>。一行替换，上下文少几十万字符。</p>
+<div class="ok">这就是本报告的教学主张：<b>记忆系统不是一次性架构决策，
+而是五个性价比递减的增量改造</b>。每做完一步都立刻可测。</div>
+<div class="pagenum">76 / 100</div></section>
+<section class="page " id="p77"><div class="part-tag">第 5 章 · NaiveAgent：全量拼接对照组</div><h1>5.4 实验对照：改造前后</h1>
+<h2>用第 7 章的组件给 NaiveAgent 加压缩</h2>
+<pre><code># 改造前 (NaiveAgentFullPrompt)
+10 轮后 messages 总字符: 6210，消息数: 31
+
+# 改造后 (加 ClaudeCode.autocompact + microcompact)
+[压缩] 22 条 -> 5 条
+压缩后消息数: 14     ← 后续轮数持续受控</code></pre>
+<h2>更大胆的实验：加长期记忆</h2>
+<p>把标定参数存进 <code>HermesMemory</code> 的 MEMORY.md 后，
+新的量测会话 system prompt 开头就是：</p>
+<pre><code>你是 Hermes 助手。
+
+## MEMORY.md（项目记忆）
+记住：我们订单接口的 P99 延迟基线是 320 ms</code></pre>
+<p>效果：<b>对照基线不再依赖用户每次提供压测参数</b>——记忆系统买到的
+不是"更像 AI"，而是具体的、可验证的行为改善。</p>
+<h2>对照实验的设计模板</h2>
+<div class="flow"><span class="box">基线(NaiveAgent 原样)</span><span class="arr">→</span><span class="box">+一种机制</span><span class="arr">→</span><span class="box">同一组任务</span><span class="arr">→</span><span class="box">测: 上下文大小/正确率/漏忆次数</span><span class="arr">→</span><span class="box">量化收益</span></div>
+<div class="pagenum">77 / 100</div></section>
+<section class="page " id="p78"><div class="part-tag">第 5 章 · NaiveAgent：全量拼接对照组</div><h1>5.5 从对照中提炼的设计清单</h1>
+<h2>NaiveAgent 教给我们的五件事</h2>
+<ol>
+<li><b>最小 agent 的定义</b>：循环 + 工具 + system prompt 就能干活——记忆不是起步条件，
+是规模化的条件；</li>
+<li><b>文件系统是免费记忆</b>：工作目录里的产物让"环境"分担了记忆职责，
+这是任何 agent 都该先利用的资源；</li>
+<li><b>system prompt 是手工记忆</b>：写死的关键约束 = 永不遗忘的"轨道 A"；
+它的局限是不能自动积累；</li>
+<li><b>膨胀是必然的</b>：只要消息无差别堆积，任何真实任务都会撞上窗口墙，
+区别只是快慢；</li>
+<li><b>改造要按性价比排序</b>：清工具输出 → 摘要 → 工具化记忆 → 文件记忆 → 检索。</li>
+</ol>
+<h2>一个反直觉的观察</h2>
+<div class="warn">NaiveAgent 的"禁止目测估数字"规则 + 结果复查自检循环，
+本质上是一种<b>行为记忆</b>：它把"正确的工作方式"固化进 prompt，
+让模型每一轮都重演。对比"记住事实"型记忆，"记住工作方式"型记忆
+（好的系统提示词、可复用的技能）往往投入产出比更高——这也是
+Claude Code 把 CLAUDE.md / 技能文件也纳入记忆版图的原因。</div>
+<div class="pagenum">78 / 100</div></section>
+<section class="page " id="p79"><div class="part-tag">第 5 章 · NaiveAgent：全量拼接对照组</div><h1>5.6 本章小结</h1>
+<h2>对照组的价值回顾</h2>
+<table><tr><th>维度</th><th>NaiveAgent 现状</th><th>加上记忆后</th><th>差距来源</th></tr><tr><td>上下文控制</td><td>无差别堆积</td><td>micro+auto 受控</td><td>第 1 章压缩</td></tr><tr><td>跨会话知识</td><td>无（只有工作目录）</td><td>MEMORY.md 生效</td><td>第 1/3 章文件记忆</td></tr><tr><td>记忆卫生</td><td>不存在</td><td>门槛+策展</td><td>第 3 章写入层</td></tr><tr><td>规模化</td><td>15 步内小任务</td><td>长任务+多会话</td><td>全部章节</td></tr></table>
+<h2>如果你只有 30 分钟</h2>
+<p>复制 <code>NaiveAgentFullPrompt</code>，做一件事：把旧的 base64 图 / 原始 JSON 大结果替换成占位符（p76 的改造①）。30 分钟后你的 agent 就已经跨过了从青铜到白银的门槛。</p>
+<h2>进入对比章</h2>
+<p>接下来第 6 章把五家放回同一张桌子上：同一维度、同一套问题、直接对比。</p>
+<div class="pagenum">79 / 100</div></section>
+<section class="page " id="p80"><div class="part-tag">第 6 章 · 五家横向对比与设计决策</div><h1>6.1 全景对照表</h1>
+<h2>一页看尽五家</h2>
+<table><tr><th>维度</th><th>Claude Code</th><th>OpenClaw</th><th>Hermes</th><th>dsh</th><th>NaiveAgent</th></tr><tr><td>长期存储</td><td>markdown(入口+目录)</td><td>SQLite+向量/LanceDB</td><td>双文件+provider</td><td>无(MCP外接)</td><td>无</td></tr><tr><td>写入</td><td>模型工具+用户</td><td>hook 自动捕获</td><td>工具+评审+策展</td><td>MCP store 工具</td><td>无</td></tr><tr><td>注入</td><td>全量+挑选≤5</td><td>检索+代理门控</td><td>双文件全量</td><td>不注入(工具化)</td><td>无</td></tr><tr><td>压缩</td><td>四级</td><td>单入口+分支</td><td>四级+围栏</td><td>事件化</td><td>无</td></tr><tr><td>原文保全</td><td>游标跟踪</td><td>摘要 cap 16k</td><td>快照+锚点</td><td>seed 保全(最优)</td><td>—</td></tr><tr><td>运维界面</td><td>memory 命令+通知</td><td>插件生态</td><td>memory CLI 子命令</td><td>MCP 配置</td><td>—</td></tr></table>
+<p class="src">MVP 建议：先抄 Claude Code 列（文件路线），需要规模再吸收 OpenClaw 列。</p>
+<div class="pagenum">80 / 100</div></section>
+<section class="page " id="p81"><div class="part-tag">第 6 章 · 五家横向对比与设计决策</div><h1>6.2 三大流派：文件派、数据派、生态派</h1>
+<h2>流派一：文件派（Claude Code、Hermes 内建）</h2>
+<p>记忆 = markdown 文件。优势：透明可审计、模型可直接维护、零基础设施。
+劣势：容量天花板、检索靠人肉组织。
+<b>适合：个人/小团队、记忆量数百条以内。</b></p>
+<h2>流派二：数据派（OpenClaw）</h2>
+<p>记忆 = 可打分的数据。优势：规模无上限、多维打分（时间/重要性/项目）、检索可控。
+劣势：需要嵌入模型和索引运维、可解释性下降。
+<b>适合：记忆持续积累、多人共享、长期运行的产品。</b></p>
+<h2>流派三：生态派（dsh）</h2>
+<p>记忆 = 外部服务。优势：框架零负担、按需选型、独立演进。
+劣势：多一跳依赖、注入不自动。
+<b>适合：框架作者、多后端产品、记忆能力差异化竞争的场景。</b></p>
+<div class="flow"><span class="box">文件派(易)</span><span class="arr">→</span><span class="box">数据派(强)</span><span class="arr">→</span><span class="box">生态派(灵活)</span><span class="arr">→</span><span class="box">—— 演进关系大于对立关系</span></div>
+<div class="note">注意五家里没有一家是纯单一流派：OpenClaw 保留 root-memory-files，
+Hermes 留 provider 接口，dsh 把会话存储做到极致。成熟系统都是混合体。</div>
+<div class="pagenum">81 / 100</div></section>
+<section class="page " id="p82"><div class="part-tag">第 6 章 · 五家横向对比与设计决策</div><h1>6.3 同题对比：谁来决定「记住什么」</h1>
+<h2>写入决策权的四种归属</h2>
+<table><tr><th>归属</th><th>代表</th><th>质量</th><th>漏记</th><th>成本</th></tr><tr><td>模型自觉</td><td>Claude Code</td><td>高</td><td>有</td><td>零额外</td></tr><tr><td>系统兜底</td><td>Hermes 评审</td><td>中</td><td>几乎无</td><td>小模型调用</td></tr><tr><td>无差别捕获</td><td>OpenClaw hook</td><td>低(靠后处理)</td><td>无</td><td>存储+清洗</td></tr><tr><td>模型自觉(工具)</td><td>dsh</td><td>高</td><td>有(且影响读取)</td><td>零额外</td></tr></table>
+<h2>决策权的深层逻辑</h2>
+<p>这其实是<span class="kw">召回率 vs 精确率</span>在记忆写入上的投影：</p>
+<ul>
+<li>要<b>精确</b>（写入质量高）→ 让理解上下文的模型决定 → 但会漏；</li>
+<li>要<b>召回</b>（不漏）→ 系统强制捕获 → 但噪音多，需要下游清洗。</li>
+</ul>
+<p>成熟解 = 双通道（Hermes）：自觉为主、兜底为辅、来源打标。
+单一通道的系统都要接受对应的缺陷。</p>
+<h2>给自研者的判断题</h2>
+<div class="warn">你的 agent 漏记一条记忆的代价是什么？
+代价小（个人助手，下次再教一遍）→ 模型自觉足够；
+代价大（企业知识库，漏了就是事故）→ 必须上捕获+评审。</div>
+<div class="pagenum">82 / 100</div></section>
+<section class="page " id="p83"><div class="part-tag">第 6 章 · 五家横向对比与设计决策</div><h1>6.4 同题对比：谁来决定「带什么」</h1>
+<h2>注入决策权的四个段位（第 0 章谱系的细化）</h2>
+<table><tr><th>段位</th><th>机制</th><th>代表</th><th>每请求成本</th><th>失手模式</th></tr><tr><td>全量</td><td>全部注入</td><td>Hermes</td><td>恒定(上限内)</td><td>记忆多后稀释注意力</td></tr><tr><td>全量+挑选</td><td>入口全量+相关挑选</td><td>Claude Code</td><td>恒定+挑选成本</td><td>挑选模型判错</td></tr><tr><td>检索门控</td><td>打分+阈值/代理</td><td>OpenClaw</td><td>检索成本,注入精省</td><td>阈值/嵌入失灵</td></tr><tr><td>工具化</td><td>模型自己查</td><td>dsh</td><td>几乎为零</td><td>模型忘记查</td></tr></table>
+<h2>失手模式比成本更值得分析</h2>
+<ul>
+<li><b>全量失手</b>是渐进的：记忆库慢慢变肥，某天突然发现模型变笨——难归因；</li>
+<li><b>挑选失手</b>是随机的：该带的没带，任务偶发出错——难复现；</li>
+<li><b>门控失手</b>是可测的：正反例回归测试能抓住大部分阈值问题（见 p39）；</li>
+<li><b>工具化失手</b>是静默的：模型不查，没人知道它"本可以知道"。</li>
+</ul>
+<div class="ok">选择建议：先全量（守住写入纪律），出现"记忆多到该挑"的问题时，
+直接上"全量+挑选"（Claude Code 模式）——它是全量的严格超集，迁移路径最平滑。</div>
+<div class="pagenum">83 / 100</div></section>
+<section class="page " id="p84"><div class="part-tag">第 6 章 · 五家横向对比与设计决策</div><h1>6.5 同题对比：压缩的可靠性设计</h1>
+<h2>压缩可靠性的四个部件，五家的覆盖情况</h2>
+<table><tr><th>部件</th><th>CC</th><th>OC</th><th>Hermes</th><th>dsh</th></tr><tr><td>触发阈值</td><td>autoCompact(20k预留)</td><td>shouldCompact()</td><td>resolve_compact_threshold</td><td>会话层事件</td></tr><tr><td>安全切分</td><td>保留区间</td><td>findCutPoint()</td><td>protected_indices</td><td>括号内 seed</td></tr><tr><td>摘要上限</td><td>(实现内控)</td><td>16,000 字符 cap</td><td>summary_target 750 tok</td><td>—</td></tr><tr><td>原文保全</td><td>游标</td><td>分支管理</td><td>快照+围栏+锚点</td><td>seed 完整(最优)</td></tr></table>
+<h2>唯一共同点：都要处理"摘要套摘要"</h2>
+<p>多次压缩是常态。四家都有对应机制（CC 的游标 / OC 的结构 /
+Hermes 的 <code>_looks_like_compaction_summary</code> / dsh 的替换节点树）。
+自研者最容易漏的就是这个：<b>第二次压缩把第一次的摘要又压了一遍，信息加速失真。</b></p>
+<h2>压缩策略的选择树</h2>
+<div class="flow"><span class="box">先做 micro(清工具输出)</span><span class="arr">→</span><span class="box">上下文仍涨?</span><span class="arr">→</span><span class="box">→ auto 摘要</span><span class="arr">→</span><span class="box">任务会分支/探索?</span><span class="arr">→</span><span class="box">→ 事件化(dsh)或分支摘要(OC)</span><span class="arr">→</span><span class="box">可靠性要求高?</span><span class="arr">→</span><span class="box">→ 围栏+锚点(Hermes)</span></div>
+<div class="pagenum">84 / 100</div></section>
+<section class="page " id="p85"><div class="part-tag">第 6 章 · 五家横向对比与设计决策</div><h1>6.6 总结论：记忆系统的十个设计原则</h1>
+<h2>从五家源码中提炼</h2>
+<ol>
+<li><b>记忆有三种形态</b>（窗口内/会话摘要/长期库），先想清楚你在建哪种；</li>
+<li><b>存储选型看消费方式</b>：进 prompt 的进文件，翻历史的进数据库；</li>
+<li><b>写入要三防</b>：去重（门槛）、限容（上限）、过期（策展）；</li>
+<li><b>写入双通道</b>：模型自觉为主、系统评审兜底、来源打标；</li>
+<li><b>注入按记忆量选段位</b>：少量全量、中量挑选、大量检索门控；</li>
+<li><b>门控要用强证据</b>：词面/实体重合是底线，弱信号只能加权；</li>
+<li><b>注入要可识别</b>：给记忆加标头/分块，让模型知道这是回忆而非实时事实；</li>
+<li><b>压缩从清工具输出开始</b>：白名单+保留最近 N 条，性价比之王；</li>
+<li><b>压缩要保全原文</b>：事件化/快照，且必须处理摘要套摘要；</li>
+<li><b>记忆要有运维面</b>：用户能查看、能改、能一键清空。</li>
+</ol>
+<div class="ok">十条都做到，你就拥有了一个不输五家任何一家的记忆系统。
+剩下的差异只是规模和打磨。</div>
+<div class="pagenum">85 / 100</div></section>
+<section class="page " id="p86"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.0 配套代码总览</h1>
+<h2>两个可运行文件</h2>
+<table><tr><th>文件</th><th>定位</th><th>内容</th></tr><tr><td>agent_memory_demo.py</td><td>最小入门版</td><td>文件记忆 + 检索召回 + 压缩的最小骨架</td></tr><tr><td>agent_memory_lab_v2.py</td><td>五实现版</td><td>五个类各对应一家，零第三方依赖</td></tr></table>
+<h2>lab 的五个类与真实仓库对应</h2>
+<table><tr><th>类</th><th>模拟对象</th><th>行数约</th></tr><tr><td>ClaudeCodeMemory</td><td>claude-code-src</td><td>90</td></tr><tr><td>OpenclawMemory</td><td>openclaw</td><td>80</td></tr><tr><td>HermesMemory</td><td>hermes-agent</td><td>80</td></tr><tr><td>DshAgent + DshMcpMemoryServer</td><td>deepseek-harness</td><td>60</td></tr><tr><td>NaiveAgentFullPrompt</td><td>naive-agent</td><td>15</td></tr></table>
+<h2>运行</h2>
+<pre><code>cd D:/memory
+python agent_memory_lab_v2.py      # 五节演示,打印各家的 prompt</code></pre>
+<div class="ok">本章接下来逐类精讲：每页一个类，先看设计意图，再看代码，最后指出与真实版的差距。每页新增的"完整实现"块即 <code>agent_memory_lab_v2.py</code> 的原文节选，可直接复制运行；它与 V1 文件（agent_memory_lab.py）结构完全相同，仅示例场景与 NaiveAgent 类名不同。</div>
+<div class="pagenum">86 / 100</div></section>
+<section class="page " id="p87"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.1 ClaudeCodeMemory 精讲</h1>
+<h2>设计意图：双轨注入 + 两级压缩，一个类装下</h2>
+<pre><code>class ClaudeCodeMemory:
+    MAX_ENTRY_LINES = 6      # 真实版 200 行/25KB
+    RELEVANT_LIMIT = 5       # 真实版 findRelevantMemories 上限
+
+    def write_entrypoint(self, lines): ...   # 轨道A: 入口文件
+    def write_memory_file(self, name, description, content): ...
+    def scan_manifest(self): ...             # 只读描述
+    def find_relevant_memories(self, query): # 轨道B: 挑选
+        scored = [...]
+        return [...scored[: self.RELEVANT_LIMIT]]
+    def build_system_prompt(self, query):    # 双轨拼装
+    @staticmethod
+    def microcompact(messages, keep_recent_tool_results=2): ...
+    @staticmethod
+    def autocompact(messages, threshold=12, keep_recent=3): ...</code></pre>
+<h2>读代码的三个重点</h2>
+<ol>
+<li><code>scan_manifest</code> 只读文件头 400 字符——模拟"检索不读全文"的成本模型；</li>
+<li><code>find_relevant_memories</code> 的 <code>RELEVANT_LIMIT</code> 截断——
+防"全都相关"失控的硬上限；</li>
+<li><code>microcompact</code> 保留最近 2 条工具结果——刚产生的结果不能清。</li>
+</ol>
+<h2>与真实版的三大差距</h2>
+<table><tr><th>环节</th><th>真实版</th><th>教学版</th></tr><tr><td>挑选</td><td>Sonnet 小模型读清单挑选</td><td>Jaccard 打分</td></tr><tr><td>轨道B注入</td><td>描述先注入,命中后读全文</td><td>直接注入描述</td></tr><tr><td>压缩触发</td><td>token 计数(20k 预留)</td><td>消息条数</td></tr></table>
+<h2>完整实现（agent_memory_lab_v2.py 原文节选）</h2>
+<p class="src">agent_memory_lab_v2.py:51-129 · class ClaudeCodeMemory（已核对可运行）</p>
+<pre><code>class ClaudeCodeMemory:
+    MAX_ENTRY_LINES = 6      # memdir.ts: MAX_ENTRYPOINT_LINES=200（教学版缩小）
+    RELEVANT_LIMIT = 5       # findRelevantMemories 最多挑 5 个相关文件
+
+    def write_entrypoint(self, lines):
+        """入口文件只放最重要的几行（真实版超 200 行会截断）"""
+        body = "\n".join(f"- {l}" for l in lines)[: self.MAX_ENTRY_LINES * 80]
+        open(self.entrypoint, "w", encoding="utf-8").write(
+            "# 自动记忆入口\n" + body + "\n")
+
+    def write_memory_file(self, name, description, content):
+        """memdir 目录：每条详细记忆一个文件，frontmatter 存描述"""
+        with open(os.path.join(self.root, name), "w", encoding="utf-8") as f:
+            f.write(f"---\ndescription: {description}\n---\n{content}\n")
+
+    def scan_manifest(self):
+        """memoryScan.ts：只读文件头做清单（不读全文，省 token）"""
+        out = []
+        for fn in os.listdir(self.root):
+            if fn == "MEMORY.md" or not fn.endswith(".md"):
+                continue
+            head = open(os.path.join(self.root, fn), encoding="utf-8").read(400)
+            m = re.search(r"description:\s*(.+)", head)
+            out.append((fn, m.group(1) if m else fn))
+        return out
+
+    def find_relevant_memories(self, query):
+        """真实实现是把 manifest 发给小模型(Sonnet)挑选；
+        教学版用词重合打分代替，同样最多返回 5 个。"""
+        scored = []
+        for fn, desc in self.scan_manifest():
+            s = overlap_score(query, desc + " " + fn)
+            if s &gt; 0.02:                          # 阈值之下视为无关
+                scored.append((s, fn, desc))
+        scored.sort(reverse=True)
+        return [(fn, desc) for _, fn, desc in scored[: self.RELEVANT_LIMIT]]
+
+    def build_system_prompt(self, query):
+        """双轨注入：入口文件全文 + 相关文件的【描述】"""
+        entry = "\n".join(open(self.entrypoint, encoding="utf-8")
+                          .read().strip().splitlines()[1:])
+        p = ("你是编程助手 Claude Code。\n\n# 自动记忆（长期）\n" + entry + "\n")
+        relevant = self.find_relevant_memories(query)
+        if relevant:
+            p += "\n## 与当前任务相关的记忆文件\n"
+            for fn, desc in relevant:
+                p += f"- {fn}: {desc}\n"
+        return p</code></pre>
+<p class="src">microcompact / autocompact 两个静态方法的完整实现见 p22 / p23 的对照代码。</p>
+<div class="pagenum">87 / 100</div></section>
+<section class="page " id="p88"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.2 OpenclawMemory 精讲</h1>
+<h2>设计意图：捕获 → 混合打分 → 门控</h2>
+<pre><code>class OpenclawMemory:
+    def capture(self, role, content):        # hook 自动捕获(关键词筛选)
+        if role == "user" and any(k in content for ...):
+            self.rows.append({"text": content, "vec": self._vec(content)})
+
+    @staticmethod
+    def _vec(text):                          # md5 假向量(占位)
+        return [b / 255.0 for b in hashlib.md5(text.encode()).digest()[:8]]
+
+    def hybrid_search(self, query, top_k=3): # 0.6*FTS + 0.4*向量
+    def recall_agent(self, query):           # 门控: FTS>0 且混合分>0.2
+        ...
+        if fts <= 0.0 or combined < 0.2:
+            return None, "NONE"
+        return hits, "INJECT"
+</code></pre>
+<h2>读代码的三个重点</h2>
+<ol>
+<li><b>假向量的位置</b>：<code>_vec</code> 是占位符，槽位在、语义无——
+换真嵌入只需替换这一个函数；</li>
+<li><b>门控双条件</b>：<code>fts > 0</code>（强证据）<b>且</b> <code>combined > 0.2</code>
+（综合分）——p39 教训的代码化；</li>
+<li><b>分数透传到 prompt</b>：注入时带 <code>(混合分 0.54 = FTS 0.32 + 向量 0.89)</code>，
+调试友好。</li>
+</ol>
+<div class="warn">改造练习：把 <code>_vec</code> 换成 <code>sklearn</code> 的
+TfidfVectorizer 或真正的 embedding API，观察"分析延迟对照基线"能否召回
+"P99 阈值 320 ms"（词面不重合但语义相关——这正是向量检索的价值）。</div>
+<h2>完整实现（agent_memory_lab_v2.py 原文节选）</h2>
+<p class="src">agent_memory_lab_v2.py:138-200 · class OpenclawMemory</p>
+<pre><code>class OpenclawMemory:
+    """JSON 文件模拟 SQLite 表，md5 假向量代替 sqlite-vec，
+    但完整保留三件套思想：混合打分；召回代理门控；hook 自动捕获。"""
+
+    @staticmethod
+    def _vec(text):                     # 假向量：换真嵌入只改这一个函数
+        h = hashlib.md5(text.encode()).digest()
+        return [b / 255.0 for b in h[:8]]
+
+    def capture(self, role, content):
+        """session-memory hook：关键词命中才捕获（真实版异步、限 8MB）"""
+        if role == "user" and any(k in content
+                                  for k in ("记住", "偏好", "公司", "我们")):
+            self.rows.append({"text": content, "vec": self._vec(content)})
+            json.dump(self.rows, open(self.path, "w", encoding="utf-8"), ...)
+
+    def hybrid_search(self, query, top_k=3):
+        """hybrid.ts：FTS 分(词重合)与向量分(余弦)加权融合"""
+        qv = self._vec(query)
+        results = []
+        for r in self.rows:
+            fts = overlap_score(query, r["text"])
+            vec = self._cos(qv, r["vec"])
+            results.append((0.6 * fts + 0.4 * vec, r["text"], fts, vec))
+        results.sort(reverse=True)
+        return results[:top_k]
+
+    def recall_agent(self, query):
+        """召回代理门控：FTS 必须 &gt;0（强证据），假向量只作辅助——
+        它噪声大，不能单独当判据"""
+        hits = self.hybrid_search(query)
+        if not hits:
+            return None, "NONE"
+        combined, text, fts, vec = hits[0]
+        if fts &lt;= 0.0 or combined &lt; 0.2:
+            return None, "NONE"
+        return hits, "INJECT"</code></pre>
+<div class="ok">真实运行（V2 场景）：相关任务"分析接口延迟需要对照 P99 基线 ms"得到 混合分 0.54 = FTS 0.32 + 向量 0.89——接口/延迟/基线/P99 四个实词词面命中，这次过门控主要靠 FTS 强证据；无关任务"帮我写一首诗"返回 NONE。</div>
+<div class="pagenum">88 / 100</div></section>
+<section class="page " id="p89"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.3 HermesMemory 精讲</h1>
+<h2>设计意图：双文件 + 三防线</h2>
+<pre><code>class HermesMemory:
+    MAX_MEMORY_CHARS = 400    # 真实版 2200
+    MAX_USER_CHARS = 250      # 真实版 1375
+
+    def _write_gate(self, kind, text):       # 防线1: 去重门槛
+        for e in self._entries(kind):
+            if text in e or e in text:
+                return False
+        return True
+
+    def add(self, kind, text):               # 防线2: 容量淘汰
+        ...
+        while len(body) > cap and len(lines) > 1:
+            lines.pop(0)                     # 超上限丢最旧
+
+    def background_review(self, transcript): # 通道: 自动提取
+    def curator(self):                       # 防线3: 周期策展
+    def build_system_prompt(self):           # 双文件全量注入</code></pre>
+<h2>读代码的三个重点</h2>
+<ol>
+<li>门槛用<b>互相包含</b>判定重复，比全等去重强（模型爱换措辞重写）；</li>
+<li>容量淘汰发生在 <code>add</code> 内部——写入时即卫生，不需要事后清理；</li>
+<li><code>background_review</code> 按"记住/我们"vs"我喜欢/以后"分流到两个文件——
+语义分流的规则版。</li>
+</ol>
+<h2>升级练习（按难度排序）</h2>
+<table><tr><th>难度</th><th>练习</th></tr><tr><td>★</td><td>给 add() 加 .bak 备份（写入前复制旧文件）</td></tr><tr><td>★★</td><td>curator 实现合并同类项：两条都提接口基线的并成一条</td></tr><tr><td>★★★</td><td>background_review 改为真 LLM 调用，输出 JSON 决定存哪类</td></tr></table>
+<h2>完整实现（agent_memory_lab_v2.py 原文节选）</h2>
+<p class="src">agent_memory_lab_v2.py:209-279 · class HermesMemory</p>
+<pre><code>class HermesMemory:
+    MAX_MEMORY_CHARS = 400      # 真实版 2200；教学版缩小
+    MAX_USER_CHARS = 250        # 真实版 1375
+
+    def _write_gate(self, kind, text):
+        """重复/被包含的内容拒写（真实版在此之上还有写审批门，见 p49 勘误）"""
+        for e in self._entries(kind):
+            if text in e or e in text:      # 互相包含 = 重复
+                return False
+        return True
+
+    def add(self, kind, text):
+        if not self._write_gate(kind, text):
+            return "SKIPPED_DUPLICATE"      # 不报错，让调用方可感知
+        _, fn, cap = self.files[kind]
+        path = os.path.join(*self.files[kind][:2])
+        lines = [f"- {e}" for e in self._entries(kind)] + [f"- {text}"]
+        body = "\n".join(lines)
+        while len(body) &gt; cap and len(lines) &gt; 1:   # 超上限丢最旧条目
+            lines.pop(0)        #（真实版不丢，改为返回"整理指引"，见 p49 源码）
+            body = "\n".join(lines)
+        open(path, "w", encoding="utf-8").write(body + "\n")
+        return "OK"
+
+    def background_review(self, transcript):
+        """真实版 fork 评审 agent 用 LLM；教学版规则分流：
+        '记住/我们' → MEMORY.md，'我喜欢/以后' → USER.md"""
+        saved = []
+        for sent in re.split(r"[。；;\n]", transcript):
+            sent = sent.strip()
+            if not sent: continue
+            if "记住" in sent or "我们" in sent:
+                saved.append(("memory", sent, self.add("memory", sent)))
+            elif "我喜欢" in sent or "以后" in sent:
+                saved.append(("user", sent, self.add("user", sent)))
+        return saved</code></pre>
+<div class="pagenum">89 / 100</div></section>
+<section class="page " id="p90"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.4 DshAgent 精讲</h1>
+<h2>设计意图：记忆=工具，prompt=说明书</h2>
+<pre><code>class DshMcpMemoryServer:                    # 模拟外部记忆服务
+    def store_memory(self, text): self.store.append(text); ...
+    def retrieve(self, query, top_k=2): ...
+
+class DshAgent:                              # 框架:只做桥接
+    @property
+    def tools(self):
+        return [{"function": {"name": "mcp__memory__store", ...}},
+                {"function": {"name": "mcp__memory__retrieve", ...}}]
+
+    def build_system_prompt(self, note=""):
+        return ("你是 DSH 助手。你可以使用 mcp__memory__store / "
+                "mcp__memory__retrieve 工具管理长期记忆。" + note)</code></pre>
+<h2>读代码的三个重点</h2>
+<ol>
+<li>server 与 agent 完全解耦——server 可以换成任何实现（真 MCP/云服务/数据库）；</li>
+<li>工具命名遵循 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code> 约定——模型从名字就知道工具来源；</li>
+<li>system prompt 里<b>没有任何记忆内容</b>，只有使用说明——这是与前三家最深的差异。</li>
+</ol>
+<h2>缺失的一环（刻意留白）</h2>
+<div class="warn">真实使用中，工具化记忆的"漏查"问题需要缓解：
+在 prompt 里加"遇到领域参数类问题，先 retrieve 再回答"。
+试着把这句话加进 <code>build_system_prompt</code> 的 note 参数，
+对比模型行为差异——你会理解为什么 dsh 之后的各家都走向了自动注入。</div>
+<h2>完整实现（agent_memory_lab_v2.py 原文节选）</h2>
+<p class="src">agent_memory_lab_v2.py:289-333 · DshMcpMemoryServer / DshAgent</p>
+<pre><code>class DshMcpMemoryServer:
+    """模拟一个外部 MCP memory server（如 Memorix / Engram）"""
+    def store_memory(self, text):
+        self.store.append(text)
+        return f"stored #{len(self.store)}"       # server 侧只认序号
+
+    def retrieve(self, query, top_k=2):
+        scored = sorted(((overlap_score(query, t), t) for t in self.store),
+                        reverse=True)
+        return [t for s, t in scored[:top_k] if s &gt; 0.01]   # 低分不返回
+
+class DshAgent:
+    """DSH 只负责桥接：把 server 能力包装成 mcp__&lt;server&gt;__&lt;tool&gt; 工具"""
+    def handle_tool_call(self, name, args):
+        if name == "mcp__memory__store":
+            return self.server.store_memory(args["text"])    # 桥接 = 转发
+        if name == "mcp__memory__retrieve":
+            return json.dumps(self.server.retrieve(args["query"]),
+                              ensure_ascii=False)
+        return "unknown tool"</code></pre>
+<div class="pagenum">90 / 100</div></section>
+<section class="page " id="p91"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.5 NaiveAgentFullPrompt 与压缩组合</h1>
+<h2>对照组：15 行的"反实现"</h2>
+<pre><code>class NaiveAgentFullPrompt:
+    def __init__(self):
+        self.messages = [{"role": "system",
+                          "content": "你是 接口性能 量测助手。（无任何记忆机制）"}]
+
+    def add_turn(self, task, tool_result):
+        self.messages.append({"role": "user", "content": task})
+        self.messages.append({"role": "tool", "content": tool_result})
+        self.messages.append({"role": "assistant", "content": "(回答)"})
+        return len(json.dumps(self.messages, ensure_ascii=False))</code></pre>
+<h2>把它变成"有记忆"只要两行</h2>
+<pre><code>compactor = ClaudeCodeMemory()
+# 在 add_turn 开头插入:
+if len(self.messages) > 20:
+    self.messages, _ = ClaudeCodeMemory.autocompact(self.messages)</code></pre>
+<h2>组合实验矩阵（建议亲手跑）</h2>
+<table><tr><th>实验</th><th>组件</th><th>预期观察</th></tr><tr><td>基线</td><td>NaiveAgentFullPrompt</td><td>字符数线性暴涨</td></tr><tr><td>+压缩</td><td>autocompact</td><td>锯齿形：涨→压→涨</td></tr><tr><td>+micro</td><td>microcompact</td><td>工具输出被钳制</td></tr><tr><td>+长期记忆</td><td>HermesMemory</td><td>跨会话参数生效</td></tr></table>
+<h2>完整实现（agent_memory_lab_v2.py 原文）</h2>
+<p class="src">agent_memory_lab_v2.py:339-348 · class NaiveAgentFullPrompt</p>
+<pre><code>class NaiveAgentFullPrompt:
+    def __init__(self):
+        self.messages = [{"role": "system",
+                          "content": "你是接口性能分析助手。（全量拼接，无任何记忆机制）"}]
+
+    def add_turn(self, task, tool_result):
+        # 每轮只是无差别 append —— 发请求时整个列表原样发出
+        self.messages.append({"role": "user", "content": task})
+        self.messages.append({"role": "tool", "content": tool_result})
+        self.messages.append({"role": "assistant", "content": "(回答)"})
+        return len(json.dumps(self.messages, ensure_ascii=False))
+# 真实运行：10 轮 × 500 字符工具输出 → 总字符 6210、消息数 31</code></pre>
+<div class="pagenum">91 / 100</div></section>
+<section class="page " id="p92"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.6 共用工具函数精讲</h1>
+<h2>tokens()：中文分词的教学替代</h2>
+<pre><code>def tokens(text):
+    words = re.findall(r"[a-zA-Z_]+|\d+", text.lower())   # 英文单词/数字
+    cjk = re.findall(r"[\u4e00-\u9fff]", text)             # 中文字
+    bigrams = [text[i:i+2] for i in ...]                    # 中文2字滑窗
+    return [w for w in words + cjk + bigrams if w not in _STOP]</code></pre>
+<p>中文没有空格分词。教学版用"单字 + 2 字滑窗"：<code>基线阈值</code> →
+<code>{基线, 线阈, 阈值, 基, 线, 阈, 值}</code>。两字滑窗能抓住大部分中文词，
+代价是产生噪音二元组——Jaccard 打分下噪音被稀释，够用。</p>
+<h2>overlap_score()：Jaccard 重合度</h2>
+<pre><code>def overlap_score(query, text):
+    q, t = set(tokens(query)), set(tokens(text))
+    if not q or not t: return 0.0
+    return len(q & t) / len(q | t)     # 交集/并集</code></pre>
+<table><tr><th>候选替代</th><th>优点</th><th>何时换</th></tr><tr><td>TF-IDF 余弦</td><td>考虑词频与稀有度</td><td>条目变长时</td></tr><tr><td>BM25</td><td>检索界金标准</td><td>条目上百时</td></tr><tr><td>真 embedding</td><td>语义匹配</td><td>同义表达多时</td></tr><tr><td>LLM 判断</td><td>最强相关性理解</td><td>成本不敏感时</td></tr></table>
+<div class="note">所有替代方案都只需要替换这一个函数——骨架（打分→阈值→排序→截断）不变。
+这就是把"相似度"做成独立函数的意义。</div>
+<div class="pagenum">92 / 100</div></section>
+<section class="page " id="p93"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.7 把教学代码接上真实 LLM</h1>
+<h2>MemoryAugmentedAgent 的接缝</h2>
+<p><span class="src">agent_memory_demo.py · MemoryAugmentedAgent.step()</span></p>
+<pre><code>def step(self, messages, task):
+    if self.compactor.should_compress(messages):
+        messages = self.compactor.compact(messages)   # 1. 压缩检查
+    messages.append({"role": "user", "content": task})
+    # 2. 这里接真实 LLM:
+    # resp = client.chat.completions.create(
+    #     model=MODEL,
+    #     messages=[{"role":"system","content":self.build_system_prompt(task)}]
+    #              + messages, tools=TOOLS)
+    messages.append({"role": "assistant", "content": f"(关于 {{task}} 的回答)"})
+    return messages</code></pre>
+<h2>接入清单（把 demo 变成真 agent）</h2>
+<ol>
+<li>填好 <code>BASE_URL / API_KEY / MODEL</code>（任意 OpenAI 兼容接口）；</li>
+<li>把 <code>build_system_prompt(task)</code> 的返回值作为 system 消息；</li>
+<li>工具调用后调用 <code>extract_and_save(tool_result + reply)</code> 做记忆提取；</li>
+<li>每 N 轮跑一次 <code>curator()</code>。</li>
+</ol>
+<h2>验收标准</h2>
+<pre><code># 会话 A 中说:
+"记住：我们项目的告警阈值是 90%"
+# 关掉进程，重开会话 B 问:
+"告警阈值是多少？"
+# 期望: 模型直接回答 90%（来自 system prompt 里的 MEMORY.md）
+# 若未过写门槛/未注入，回看 lab 第 3 节的日志定位环节</code></pre>
+<div class="pagenum">93 / 100</div></section>
+<section class="page " id="p94"><div class="part-tag">第 7 章 · Python 实现教学</div><h1>7.8 常见坑清单</h1>
+<h2>初学者最容易踩的八个坑</h2>
+<table><tr><th>#</th><th>坑</th><th>症状</th><th>解法(出处)</th></tr><tr><td>1</td><td>记忆无限繁殖</td><td>MEMORY.md 越写越长</td><td>写门槛+容量上限(p49)</td></tr><tr><td>2</td><td>噪音注入</td><td>无关记忆污染上下文</td><td>门控/NONE(p37,39)</td></tr><tr><td>3</td><td>摘要套摘要</td><td>多次压缩后信息失真</td><td>识别旧摘要(p56)</td></tr><tr><td>4</td><td>清掉刚产的结果</td><td>模型重复调工具</td><td>保留最近N条(p22)</td></tr><tr><td>5</td><td>压缩切在工具对中间</td><td>对话结构损坏</td><td>切点/保护区间(p41,55)</td></tr><tr><td>6</td><td>模型忘记查记忆</td><td>工具化记忆静默失效</td><td>prompt 规则/自动代查(p64)</td></tr><tr><td>7</td><td>并发写坏记忆文件</td><td>文件偶发损坏</td><td>文件锁+备份(p46)</td></tr><tr><td>8</td><td>注入内容无标注</td><td>模型把回忆当实时事实</td><td>记忆块加标头(p36)</td></tr></table>
+<h2>调试方法论</h2>
+<ol>
+<li><b>打印最终 prompt</b>：一切记忆问题最终都体现在拼出来的 prompt 里——
+本报告的 prompt 实例全是这么来的；</li>
+<li><b>带打分日志</b>：像 OpenClaw 教学版那样把 FTS/向量分打进注入文本；</li>
+<li><b>正反例回归</b>：维护一组"该记/不该记、该带/不该带"的用例，每次改阈值就跑一遍。</li>
+</ol>
+<div class="pagenum">94 / 100</div></section>
+<section class="page " id="p95"><div class="part-tag">第 8 章 · 注入后的完整 Prompt 实例集</div><h1>8.1 实例一：Claude Code 式（双轨注入）</h1>
+<h2>任务："帮我分析这次压测的接口延迟，出报告"</h2>
+<p class="src">以下为 agent_memory_lab_v2.py 真实输出（非示意）</p>
+<pre><code>你是编程助手 Claude Code。
+
+# 自动记忆（长期）
+- 用户在做订单服务的接口性能优化
+- 报告必须用 markdown 表格、注明单位 ms
+- P99 阈值 320 ms
+
+## 与当前任务相关的记忆文件
+- perf-baseline.md: 性能基线参数：订单接口 P99 阈值 320 ms，采样窗口 10 s</code></pre>
+<h2>这个 prompt 里的三个机制</h2>
+<ol>
+<li><b>轨道 A</b>（自动记忆块）：MEMORY.md 全量，3 条原子事实，永在场；</li>
+<li><b>轨道 B</b>（相关记忆文件）：任务与标定文件描述匹配，注入描述引导模型读全文；</li>
+<li><b>缺席者</b>：coffee.md（咖啡偏好）在库中但未注入——挑选机制生效的证据。</li>
+</ol>
+<h2>配合的压缩输出（同一次运行）</h2>
+<pre><code>[tool] [Old tool result content cleared]    ← microcompact
+触发压缩: True，15 条 -> 4 条               ← autocompact</code></pre>
+<div class="pagenum">95 / 100</div></section>
+<section class="page " id="p96"><div class="part-tag">第 8 章 · 注入后的完整 Prompt 实例集</div><h1>8.2 实例二：OpenClaw 式（门控注入）</h1>
+<h2>相关任务 vs 无关任务（真实输出对照）</h2>
+<pre><code># 任务: "分析接口延迟需要对照基线 ms"
+你是 OpenClaw 助手。
+## ACTIVE_MEMORY_CONTEXT（召回的记忆）
+- 我们订单接口的 P99 延迟基线是 320 ms，记住
+  (混合分 0.54 = FTS 0.32 + 向量 0.89)
+
+# 任务: "帮我写一首诗"
+你是 OpenClaw 助手。
+(active-memory: 本次无相关记忆，不注入)</code></pre>
+<h2>解读分数行</h2>
+<ul>
+<li><code>FTS 0.32</code>：接口/延迟/基线/P99 四个实词词面全部命中——这次关键词路线直接命中，是过门控的主力证据；</li>
+<li><code>向量 0.74</code>：假向量的余弦——无语义意义但展示了槽位；</li>
+<li><code>混合 0.54</code>：稳过门控线（&gt;0.2 且 FTS&gt;0）→ 注入。</li>
+</ul>
+<div class="warn">诚实注解：向量 0.89 看着高，其实是 md5 假向量的余弦、<b>没有语义意义</b>——这次注入真正立功的是 FTS 0.32 的词面强证据。真实 OpenClaw 用真嵌入模型，价值恰恰在词面<b>不</b>重合的场景：用户说"接口响应太慢了"，库里的"P99 基线 320 ms"一个词都对不上，但真向量能召回它——那才是向量分该立功、关键词路线失灵的场合（见 p39 / p88 的换真向量练习）。</div>
+<div class="pagenum">96 / 100</div></section>
+<section class="page " id="p97"><div class="part-tag">第 8 章 · 注入后的完整 Prompt 实例集</div><h1>8.3 实例三：Hermes 式（双文件 + 写门槛）</h1>
+<h2>提取日志 + 最终 prompt（真实输出）</h2>
+<pre><code># 输入文本:
+"记住：我们订单接口的 P99 延迟基线是 320 ms。我喜欢用 markdown 表格。
+ 记住：我们订单接口的 P99 延迟基线是 320 ms。"
+
+# background_review 提取日志:
+[memory] OK: 记住：我们订单接口的 P99 延迟基线是 320 ms
+[user]   OK: 我喜欢用 markdown 表格
+[memory] SKIPPED_DUPLICATE: 记住：我们订单接口的 P99 延迟基线是 320 ms
+
+# 注入后的完整 system prompt:
+你是 Hermes 助手。
+
+## MEMORY.md（项目记忆）
+记住：我们订单接口的 P99 延迟基线是 320 ms
+
+## USER.md（用户画像）
+我喜欢用 markdown 表格</code></pre>
+<h2>三行日志，三个机制</h2>
+<ol>
+<li><b>语义分流</b>：同一句式按内容分流到项目记忆/用户画像；</li>
+<li><b>门槛拦截</b>：第三次提取被 <code>_write_gate</code> 判重，
+返回 <code>SKIPPED_DUPLICATE</code>（不报错、可感知）；</li>
+<li><b>分块注入</b>：两个文件各占一个标题块，模型可区分事实与偏好。</li>
+</ol>
+<div class="pagenum">97 / 100</div></section>
+<section class="page " id="p98"><div class="part-tag">第 8 章 · 注入后的完整 Prompt 实例集</div><h1>8.4 实例四：dsh 式（工具化）与对照</h1>
+<h2>dsh：prompt 里只有说明书（真实输出）</h2>
+<pre><code>system prompt: 你是 DSH 助手。你可以使用 mcp__memory__store /
+mcp__memory__retrieve 工具管理长期记忆。
+工具列表: ['mcp__memory__store', 'mcp__memory__retrieve']
+调用 mcp__memory__store:    stored #1
+调用 mcp__memory__retrieve: ["订单接口 P99 基线 320 ms"]</code></pre>
+<h2>对照：NaiveAgent 的裸 prompt（无记忆）</h2>
+<pre><code>system: 你是 接口性能 量测助手。规则：
+1. 所有数字必须来自 run_python 执行的代码。禁止目测估数字。…
+（没有记忆块、没有召回区、没有工具——10 轮后上下文 6200+ 字符且持续膨胀）</code></pre>
+<h2>四个 prompt 放在一起看</h2>
+<table><tr><th>实例</th><th>记忆在 prompt 里的形态</th><th>一句话概括</th></tr><tr><td>Claude Code</td><td>静默融入(轨道A) + 引用清单(轨道B)</td><td>背景知识化</td></tr><tr><td>OpenClaw</td><td>带标头带分数的引用块</td><td>可调试的引用</td></tr><tr><td>Hermes</td><td>分语义块的事实/偏好</td><td>档案卡片</td></tr><tr><td>dsh</td><td>不存在(只有使用说明)</td><td>图书馆借阅证</td></tr></table>
+<div class="ok">读到这里，你已经能"看 prompt 识架构"：拿到任何 agent 的真实对话日志，
+从记忆在 prompt 中的形态就能反推它的记忆系统设计。</div>
+<div class="pagenum">98 / 100</div></section>
+<section class="page " id="p99"><div class="part-tag">第 9 章 · 术语表与练习题</div><h1>9.1 术语表</h1>
+<h2>按主题排列的 20 个术语</h2>
+<table><tr><th>术语</th><th>一句话解释</th><th>详见</th></tr><tr><td>上下文窗口</td><td>模型单次推理能看到的文本上限</td><td>p4</td></tr><tr><td>token</td><td>文本的最小计费/计量单位,中文 1 字约 1~2 token</td><td>p4</td></tr><tr><td>长期记忆</td><td>跨会话持久保存的浓缩事实</td><td>p5</td></tr><tr><td>压缩(compaction)</td><td>旧消息换摘要以腾出窗口</td><td>p6</td></tr><tr><td>microcompact</td><td>只清旧工具输出的轻量压缩</td><td>p6,22</td></tr><tr><td>检索召回(recall)</td><td>按当前任务挑相关记忆注入</td><td>p7</td></tr><tr><td>FTS</td><td>全文检索,词面匹配</td><td>p7,30</td></tr><tr><td>向量检索</td><td>嵌入向量余弦相似度匹配,可跨同义表达</td><td>p7</td></tr><tr><td>混合检索(hybrid)</td><td>多路打分加权融合</td><td>p38</td></tr><tr><td>门控</td><td>注入前的相关性裁决,无关返回 NONE</td><td>p7,37</td></tr><tr><td>写门槛(write gate)</td><td>写入前去重/校验的防线</td><td>p49</td></tr><tr><td>策展(curation)</td><td>定期归档/合并/修剪记忆库</td><td>p51</td></tr><tr><td>manifest/清单</td><td>记忆库的描述索引,检索先读清单不读全文</td><td>p15</td></tr><tr><td>frontmatter</td><td>markdown 文件头的元数据(如 description)</td><td>p14</td></tr><tr><td>事件溯源</td><td>存事件流,状态由投影得出,历史不可变</td><td>p66</td></tr><tr><td>compaction 事件括号</td><td>start/end 事件标记压缩边界,seed 保全原文</td><td>p69</td></tr><tr><td>提交围栏(fence)</td><td>压缩的原子提交,防中途崩溃损坏历史</td><td>p57</td></tr><tr><td>摘要套摘要</td><td>多次压缩导致摘要层层失真的问题</td><td>p56</td></tr><tr><td>MCP</td><td>模型接外部工具/数据的协议,记忆工具化载体</td><td>p62</td></tr><tr><td>recovery footer</td><td>压缩后附的「交接说明」，降低失忆突兀感</td><td>p56</td></tr></table>
+<div class="pagenum">99 / 100</div></section>
+<section class="page " id="p100"><div class="part-tag">第 9 章 · 术语表与练习题</div><h1>9.2 毕业练习与延伸</h1>
+<h2>十道毕业练习（由易到难）</h2>
+<ol>
+<li>运行 <code>agent_memory_lab_v2.py</code>，向别人讲解五节输出各自演示了什么；</li>
+<li>给 <code>HermesMemory.add</code> 加 <code>.bak</code> 备份；</li>
+<li>把 <code>overlap_score</code> 换成 TF-IDF，重跑门控实验；</li>
+<li>给 <code>NaiveAgentFullPrompt</code> 加 autocompact，绘制"轮数-上下文大小"曲线；</li>
+<li>实现 p71 的事件化压缩结构，接到 NaiveAgent 上；</li>
+<li>把 <code>background_review</code> 换成真 LLM 调用（结构化输出 JSON）；</li>
+<li>实现 curator 的"合并同类项"；</li>
+<li>给 dsh 式 agent 加"自动代查"：特定话题触发时框架代调 retrieve；</li>
+<li>做一套正反例回归测试集，覆盖 p94 的八个坑；</li>
+<li>设计并实现你自己的"第六种记忆系统"，写一篇对比分析。</li>
+</ol>
+<h2>延伸阅读（仓库内路径）</h2>
+<table><tr><th>主题</th><th>最值得精读的文件</th></tr><tr><td>挑选注入</td><td>claude-code-src/src/memdir/findRelevantMemories.ts</td></tr><tr><td>混合检索</td><td>openclaw/extensions/memory-core/src/memory/hybrid.ts</td></tr><tr><td>后台评审</td><td>hermes-agent/agent/background_review.py</td></tr><tr><td>事件化压缩</td><td>deepseek-harness/packages/core/session/src/types.ts:312</td></tr><tr><td>轨迹压缩</td><td>hermes-agent/trajectory_compressor.py</td></tr></table>
+<div class="ok"><b>结语</b>：记忆系统没有魔法——它就是把"该记什么、该忘什么、该带什么"
+这三个人类笔记问题工程化。五家源码给出了五种成熟答案，
+而你的答案应该从"一个 MEMORY.md 文件"开始生长。祝构建顺利。</div>
+<div class="pagenum">100 / 100</div></section>
+</body></html>
